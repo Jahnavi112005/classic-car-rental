@@ -1,0 +1,3 @@
+ALTER TABLE inquiries ADD COLUMN IF NOT EXISTS vehicle_interested TEXT DEFAULT '';
+ALTER TABLE inquiries ADD COLUMN IF NOT EXISTS pickup_date DATE;
+ALTER TABLE inquiries ADD COLUMN IF NOT EXISTS drop_date DATE;

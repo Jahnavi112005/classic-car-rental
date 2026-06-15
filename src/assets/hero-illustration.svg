@@ -1,0 +1,55 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 600" width="1200" height="600">
+  <defs>
+    <linearGradient id="bg" x1="0" x2="1">
+      <stop offset="0" stop-color="#F8F3EA"/>
+      <stop offset="1" stop-color="#F0E8DC"/>
+    </linearGradient>
+  </defs>
+  <rect width="100%" height="100%" fill="url(#bg)"/>
+  <!-- Palace sketch -->
+  <g transform="translate(380,40)" opacity="0.95">
+    <g fill="none" stroke="#7B4A1E" stroke-width="2">
+      <ellipse cx="120" cy="60" rx="36" ry="28" />
+      <path d="M84 60 Q120 20 156 60" />
+      <rect x="20" y="110" width="240" height="120" rx="6" />
+      <path d="M80 230 L80 170 Q120 140 160 170 L160 230" />
+      <g transform="translate(30,120)">
+        <path d="M0 80 L0 20 Q30 0 60 20 L60 80" />
+      </g>
+      <g transform="translate(180,120)">
+        <path d="M0 80 L0 20 Q30 0 60 20 L60 80" />
+      </g>
+    </g>
+    <!-- decorative dots -->
+    <g fill="#D4A44A" opacity="0.7">
+      <circle cx="40" cy="40" r="3" />
+      <circle cx="120" cy="30" r="4" />
+      <circle cx="200" cy="40" r="3" />
+    </g>
+  </g>
+
+  <!-- Floral cluster behind car -->
+  <g transform="translate(640,220) scale(1)" opacity="0.95">
+    <g fill="#EDE0D3" stroke="#7B4A1E" stroke-width="1">
+      <ellipse cx="70" cy="40" rx="24" ry="16" />
+      <ellipse cx="40" cy="20" rx="14" ry="10" />
+      <ellipse cx="100" cy="20" rx="14" ry="10" />
+    </g>
+    <g fill="#FFFFFF">
+      <circle cx="70" cy="40" r="6" fill="#F8F3EA" />
+    </g>
+  </g>
+
+  <!-- Classic car simplified -->
+  <g transform="translate(520,260) scale(1)" fill="none" stroke="#2A1A0A" stroke-width="2">
+    <rect x="0" y="20" rx="18" ry="18" width="360" height="110" fill="#F7F5F2" stroke="#CFC0B1" />
+    <path d="M30 20 Q60 0 120 0 L300 0 Q340 0 360 20" stroke="#CFC0B1" fill="#F7F5F2" />
+    <circle cx="80" cy="150" r="20" fill="#EDE0D3" stroke="#C4A574" />
+    <circle cx="300" cy="150" r="20" fill="#EDE0D3" stroke="#C4A574" />
+    <rect x="40" y="40" width="120" height="50" rx="6" fill="#FFF" stroke="#D4C6B4" />
+    <rect x="220" y="40" width="80" height="50" rx="6" fill="#FFF" stroke="#D4C6B4" />
+  </g>
+
+  <!-- Ground shadow -->
+  <ellipse cx="680" cy="380" rx="220" ry="40" fill="rgba(0,0,0,0.12)" />
+</svg>
