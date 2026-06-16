@@ -2,10 +2,11 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { Fuel, Settings, Users, Star, ArrowRight, Zap } from 'lucide-react';
-import { supabase, Car } from '../lib/supabase';
+import { Car } from '../lib/supabase';
+import { fleetCars } from '../data/fleet';
 import { whatsAppUrl } from './WhatsAppFloat';
 
-const categories = ['All', 'Hatchback', 'Sedan', 'SUV', 'Luxury', 'Premium Luxury'];
+const categories = ['All', 'Hatchback', 'Sedan', 'SUV', 'Premium Luxury'];
 
 export default function Fleet() {
   const [cars, setCars] = useState<Car[]>([]);
@@ -14,13 +15,10 @@ export default function Fleet() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    async function fetchCars() {
-      const { data } = await supabase.from('cars').select('*').eq('availability', true).limit(8);
-      setCars(data || []);
-      setFiltered(data || []);
-      setLoading(false);
-    }
-    fetchCars();
+    const availableCars = fleetCars.filter(c => c.availability).slice(0, 8);
+    setCars(availableCars);
+    setFiltered(availableCars);
+    setLoading(false);
   }, []);
 
   useEffect(() => {
@@ -149,10 +147,15 @@ function CarCard({ car, index }: { car: Car; index: number }) {
         <div className="absolute inset-0 bg-gradient-to-t from-earth/80 via-transparent to-transparent" />
 
         {/* Category badge */}
-        <div className="absolute top-3 left-3">
+        <div className="absolute top-3 left-3 space-y-2">
           <span className="font-montserrat text-xs font-semibold px-3 py-1 bg-brown text-cream rounded-full">
             {car.category}
           </span>
+          {car.featured && (
+            <span className="font-montserrat text-[10px] font-semibold px-2.5 py-1 bg-yellow-500 text-earth rounded-full uppercase tracking-[0.2em]">
+              Most Popular
+            </span>
+          )}
         </div>
 
         {/* Availability */}
@@ -177,7 +180,7 @@ function CarCard({ car, index }: { car: Car; index: number }) {
         <h3 className="font-playfair text-lg font-bold text-earth mb-1 group-hover:text-brown transition-colors">
           {car.name}
         </h3>
-        <p className="text-xs text-stone font-poppins mb-4">{car.brand} · {car.year}</p>
+        <p className="text-xs text-stone font-poppins mb-4">{car.brand} · {car.yearRange || car.year}</p>
 
         {/* Specs */}
         <div className="flex items-center justify-between mb-5">

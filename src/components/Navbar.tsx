@@ -76,12 +76,13 @@ export default function Navbar() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-18 py-3">
           {/* Logo */}
-          <Link to="/" className="flex items-center gap-3 group">
-            <div
-              className="w-10 h-10 rounded-lg flex items-center justify-center transition-all duration-300"
-              style={{ background: '#7B4A1E' }}
-            >
-              <Car className="w-5 h-5 text-white" />
+          <Link to="/" className="flex items-center gap-4 group">
+            <div className="w-14 h-14 rounded-xl overflow-hidden flex items-center justify-center bg-white shadow-sm transition-all duration-300">
+              <img
+                src="/assets/classic-car-logo.png"
+                alt="Classic Car Rental Logo"
+                className="w-full h-full object-contain"
+              />
             </div>
             <div>
               <div
