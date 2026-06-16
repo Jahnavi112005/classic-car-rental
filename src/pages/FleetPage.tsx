@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link, useSearchParams } from 'react-router-dom';
 import { Fuel, Settings, Users, Star, Search, SlidersHorizontal, X, ArrowRight } from 'lucide-react';
-import { supabase, Car } from '../lib/supabase';
+import { Car } from '../lib/supabase';
+import { fleetCars } from '../data/fleet';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import WhatsAppFloat from '../components/WhatsAppFloat';
@@ -27,12 +28,8 @@ export default function FleetPage() {
   const [branchOpen, setBranchOpen] = useState(false);
 
   useEffect(() => {
-    async function fetchCars() {
-      const { data } = await supabase.from('cars').select('*').order('price_per_day');
-      setCars(data || []);
-      setLoading(false);
-    }
-    fetchCars();
+    setCars(fleetCars);
+    setLoading(false);
   }, []);
 
   useEffect(() => {
@@ -41,7 +38,12 @@ export default function FleetPage() {
     if (fuel !== 'All') result = result.filter(c => c.fuel_type === fuel);
     if (transmission !== 'All') result = result.filter(c => c.transmission === transmission);
     result = result.filter(c => c.price_per_day <= maxPrice);
-    if (search) result = result.filter(c => `${c.name} ${c.brand} ${c.model}`.toLowerCase().includes(search.toLowerCase()));
+    if (search) {
+      const term = search.toLowerCase();
+      result = result.filter(c =>
+        `${c.name} ${c.brand} ${c.model} ${c.yearRange || c.year}`.toLowerCase().includes(term)
+      );
+    }
     setFiltered(result);
   }, [cars, category, fuel, transmission, maxPrice, search]);
 
@@ -221,8 +223,13 @@ function FleetCarCard({ car, index }: { car: Car; index: number }) {
           transition={{ duration: 0.6 }}
         />
         <div className="absolute inset-0 bg-gradient-to-t from-earth/80 via-transparent to-transparent" />
-        <div className="absolute top-3 left-3">
+        <div className="absolute top-3 left-3 space-y-2">
           <span className="font-montserrat text-xs font-semibold px-3 py-1 bg-brown text-cream rounded-full">{car.category}</span>
+          {car.featured && (
+            <span className="font-montserrat text-[10px] font-semibold px-2.5 py-1 bg-yellow-500 text-earth rounded-full uppercase tracking-[0.2em]">
+              Most Popular
+            </span>
+          )}
         </div>
         <div className="absolute top-3 right-3">
           <div className="flex items-center gap-1.5 bg-cream/90 backdrop-blur-sm px-2 py-1 rounded-full">
@@ -237,7 +244,7 @@ function FleetCarCard({ car, index }: { car: Car; index: number }) {
       </div>
       <div className="p-5">
         <h3 className="font-playfair text-lg font-bold text-earth mb-1 group-hover:text-brown transition-colors">{car.name}</h3>
-        <p className="text-xs text-stone font-poppins mb-4">{car.brand} · {car.year}</p>
+        <p className="text-xs text-stone font-poppins mb-4">{car.brand} · {car.yearRange || car.year}</p>
         <div className="flex items-center justify-between mb-5">
           <div className="flex items-center gap-1.5 text-xs text-stone"><Fuel className="w-3.5 h-3.5 text-brown/60" />{car.fuel_type}</div>
           <div className="flex items-center gap-1.5 text-xs text-stone"><Settings className="w-3.5 h-3.5 text-brown/60" />{car.transmission}</div>

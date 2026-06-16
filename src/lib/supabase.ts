@@ -3,7 +3,10 @@ import { createClient } from '@supabase/supabase-js';
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+const safeSupabaseUrl = supabaseUrl || 'https://example.supabase.co';
+const safeSupabaseAnonKey = supabaseAnonKey || 'public-anon-key';
+
+export const supabase = createClient(safeSupabaseUrl, safeSupabaseAnonKey);
 
 export type Profile = {
   id: string;
@@ -16,16 +19,18 @@ export type Profile = {
 };
 
 export type Car = {
-  id: string;
+  id: string | number;
   name: string;
   brand: string;
   model: string;
-  year: number;
+  year: number | string;
+  yearRange?: string;
   fuel_type: 'Petrol' | 'Diesel' | 'Electric' | 'Hybrid' | 'CNG';
   transmission: 'Manual' | 'Automatic';
   seats: number;
   price_per_day: number;
   category: 'Hatchback' | 'Sedan' | 'SUV' | 'Luxury' | 'Premium Luxury';
+  featured?: boolean;
   description: string;
   images: string[];
   features: string[];
