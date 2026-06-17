@@ -5,7 +5,6 @@ import Fleet from '../components/Fleet';
 import FeaturedVehicles from '../components/FeaturedVehicles';
 import WhyChooseUs from '../components/WhyChooseUs';
 import AboutMysore from '../components/AboutMysore';
-import BookingRequestSection from '../components/BookingRequestSection';
 import Pricing from '../components/Pricing';
 import Testimonials from '../components/Testimonials';
 import FAQ from '../components/FAQ';
@@ -23,7 +22,6 @@ export default function Home() {
     <div className="min-h-screen">
       <Navbar />
       <Hero />
-      <BookingRequestSection />
       <Fleet />
       <FeaturedVehicles />
       <WhyChooseUs />

@@ -40,19 +40,19 @@ export default function Hero() {
         backgroundSize: 'cover',
       }}
     >
-      {/* Decorative botanical left */}
-      <div className="absolute left-0 top-0 bottom-0 w-24 md:w-32 pointer-events-none select-none overflow-hidden">
+      {/* Decorative botanical left (hidden on small screens) */}
+      <div className="hidden md:block absolute top-0 bottom-0 pointer-events-none select-none overflow-hidden" style={{ left: '-36px', width: '140px' }}>
         <BotanicalLeft />
       </div>
-      {/* Decorative botanical right */}
-      <div className="absolute right-0 top-0 w-20 md:w-28 pointer-events-none select-none overflow-hidden">
+      {/* Decorative botanical right (hide on small screens) */}
+      <div className="hidden md:block absolute right-0 top-0 w-20 md:w-28 pointer-events-none select-none overflow-hidden">
         <BotanicalRight />
       </div>
 
-      <div className="relative z-10 max-w-7xl mx-auto px-8 sm:px-12 lg:px-16 pt-28 pb-8">
-        <div className="grid lg:grid-cols-2 gap-6 lg:gap-4 items-center min-h-[620px]">
+      <div className="relative z-10 max-w-7xl mx-auto px-8 sm:px-12 lg:px-16 pt-24 pb-8">
+        <div className="grid lg:grid-cols-2 gap-6 lg:gap-8 items-center min-h-[560px]">
           {/* Left Content */}
-          <div className="pr-0 lg:pr-8">
+          <div className="pr-0 lg:pr-8 -ml-4 lg:-ml-10 px-4 sm:px-6" style={{ maxWidth: '680px' }}>
             {/* Badge */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
@@ -69,6 +69,11 @@ export default function Hero() {
               </span>
             </motion.div>
 
+            {/* subtle accent under badge */}
+            <div className="mt-2 mb-4" style={{ height: 3, maxWidth: 120 }}>
+              <div style={{ height: 1, background: 'rgba(123,74,30,0.12)' }} />
+            </div>
+
             {/* Heading */}
             <motion.div
               initial={{ opacity: 0, y: 30 }}
@@ -76,30 +81,32 @@ export default function Hero() {
               transition={{ duration: 0.6, delay: 0.1 }}
             >
               <h1 className="font-playfair leading-tight mb-3">
-                <span
-                  className="block text-4xl md:text-6xl lg:text-[72px] font-bold"
-                  style={{ color: '#1A1209' }}
-                >
-                  Drive Your Journey.
+                <span className="block text-4xl md:text-6xl lg:text-[64px] font-bold" style={{ color: '#1A1209' }}>
+                  Classic Cars.
                 </span>
-                <span className="block text-4xl md:text-6xl lg:text-[72px] font-bold">
-                  <span style={{ color: '#7B4A1E' }}>Discover</span>
-                  <span style={{ color: '#7B4A1E' }}> Mysore</span>
-                  <span style={{ color: '#1A1209' }}> &amp; Beyond.</span>
+                <span className="block text-4xl md:text-6xl lg:text-[64px] font-bold" style={{ color: '#1A1209' }}>
+                  Extraordinary Experiences.
                 </span>
               </h1>
-            </motion.div>
 
+              {/* Decorative divider */}
+              <div className="flex items-center gap-4 mt-4 mb-6">
+                <div style={{ height: 1, background: 'rgba(123,74,30,0.18)', flex: 1 }} />
+                <svg width="28" height="12" viewBox="0 0 28 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M14 0L16 4L20 4L17 6L18 10L14 8L10 10L11 6L8 4L12 4L14 0Z" fill="#D4A44A" />
+                </svg>
+                <div style={{ height: 1, background: 'rgba(123,74,30,0.18)', flex: 1 }} />
+              </div>
+            </motion.div>
             {/* Description */}
             <motion.p
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.2 }}
               className="font-poppins text-base leading-relaxed mb-7"
-              style={{ color: '#5C4A35', maxWidth: '420px' }}
+              style={{ color: '#5C4A35', maxWidth: '560px' }}
             >
-              Premium self-drive cars for every occasion. Comfort, safety, and
-              freedom – all in your hands.
+              Premium self-drive cars for every occasion. Comfort, safety, and freedom – all in your hands.
             </motion.p>
 
             {/* Feature Badges */}
@@ -165,8 +172,12 @@ export default function Hero() {
               </button>
             </motion.div>
           </div>
+          {/* Mobile image (show under lg) */}
+          <div className="lg:hidden w-full flex justify-center mt-8">
+            <img src={heroIllustration} alt="Palace and classic car" className="max-w-full h-auto object-contain" />
+          </div>
 
-          {/* Right - Palace + Car + Flowers */}
+          {/* Right - Palace + Car + Flowers (illustration for lg+) */}
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}

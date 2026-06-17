@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Menu, X, LogOut, User, LayoutDashboard, Shield, Car } from 'lucide-react';
+import { Menu, X, LogOut, User, LayoutDashboard, Shield } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 const navLinks = [
@@ -78,8 +78,8 @@ export default function Navbar() {
           {/* Logo */}
           <Link to="/" className="flex items-center gap-4 group">
               <div className="w-14 h-14 rounded-xl overflow-hidden flex items-center justify-center bg-white shadow-sm transition-all duration-300">
-                <img
-                  src="/assets/classic-car-logo.png"
+              <img
+                src="/assets/classic-car-logo.svg"
                 alt="Classic Car Rental Logo"
                 className="w-full h-full object-contain"
               />
