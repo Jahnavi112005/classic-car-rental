@@ -3,7 +3,48 @@ import { createClient } from '@supabase/supabase-js';
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+let _supabase = null;
+if (supabaseUrl && supabaseAnonKey) {
+  _supabase = createClient(supabaseUrl, supabaseAnonKey);
+} else {
+  console.warn('VITE_SUPABASE_URL or VITE_SUPABASE_ANON_KEY is not set. Supabase client not initialized. Using fallback no-op client.');
+
+  const noopResponse = { data: null, error: null };
+
+  const chainableObj: any = {
+    select() { return this; },
+    insert() { return this; },
+    update() { return this; },
+    delete() { return this; },
+    maybeSingle() { return this; },
+    rpc() { return Promise.resolve(noopResponse); },
+    eq() { return this; },
+    order() { return this; },
+    limit() { return this; },
+    range() { return this; },
+    like() { return this; },
+    ilike() { return this; },
+    neq() { return this; },
+    then(resolve: any) { resolve(noopResponse); return Promise.resolve(noopResponse); },
+    catch() { return Promise.resolve(noopResponse); },
+  };
+
+  const fallback = {
+    auth: {
+      getSession: () => Promise.resolve({ data: { session: null }, error: null }),
+      onAuthStateChange: (_cb: any) => ({ data: { subscription: { unsubscribe: () => {} } } }),
+      signUp: async () => ({ data: null, error: null }),
+      signInWithPassword: async () => ({ data: null, error: null }),
+      signOut: async () => ({ error: null }),
+    },
+    from: () => chainableObj,
+    rpc: () => Promise.resolve(noopResponse),
+  } as any;
+
+  _supabase = fallback;
+}
+
+export const supabase = _supabase as any;
 
 export type Profile = {
   id: string;
