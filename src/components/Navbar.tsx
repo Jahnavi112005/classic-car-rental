@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Menu, X, LogOut, User, LayoutDashboard, Shield } from 'lucide-react';
+import { Menu, X, LayoutDashboard } from 'lucide-react';
 import logoImg from '../assets/classic-car-rental-logo.png';
 import { useAuth } from '../context/AuthContext';
 
@@ -16,8 +16,7 @@ const navLinks = [
 export default function Navbar() {
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
-  const [dropdownOpen, setDropdownOpen] = useState(false);
-  const { user, profile, signOut } = useAuth();
+  const { user, signOut } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
   const isHome = location.pathname === '/';
@@ -30,7 +29,6 @@ export default function Navbar() {
 
   useEffect(() => {
     setMenuOpen(false);
-    setDropdownOpen(false);
   }, [location]);
 
   // Light theme when: on home page AND not scrolled
@@ -39,7 +37,6 @@ export default function Navbar() {
 
   async function handleSignOut() {
     await signOut();
-    setDropdownOpen(false);
     navigate('/');
   }
 
