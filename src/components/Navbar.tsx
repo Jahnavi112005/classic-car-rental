@@ -77,9 +77,9 @@ export default function Navbar() {
         <div className="flex items-center justify-between h-18 py-3">
           {/* Logo */}
           <Link to="/" className="flex items-center gap-4 group">
-            <div className="w-14 h-14 rounded-xl overflow-hidden flex items-center justify-center bg-white shadow-sm transition-all duration-300">
+              <div className="w-14 h-14 rounded-xl overflow-hidden flex items-center justify-center bg-white shadow-sm transition-all duration-300">
               <img
-                src="/assets/classic-car-logo.png"
+                src="/assets/classic-car-logo.svg"
                 alt="Classic Car Rental Logo"
                 className="w-full h-full object-contain"
               />
@@ -91,12 +91,7 @@ export default function Navbar() {
               >
                 CLASSIC CAR RENTAL
               </div>
-              <div
-                className="font-poppins text-[10px] tracking-[0.25em] uppercase mt-0.5 transition-colors duration-300"
-                style={{ color: isLight ? '#7B4A1E' : '#D4A44A99' }}
-              >
-                MYSORE
-              </div>
+            
             </div>
           </Link>
 
@@ -146,6 +141,21 @@ export default function Navbar() {
 
           {/* Right */}
           <div className="hidden lg:flex items-center gap-3">
+            <motion.button
+              whileHover={{ y: -2, scale: 1.01 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={() => navigate('/booking')}
+              className="inline-flex items-center justify-center font-montserrat font-semibold text-sm text-white transition-all duration-300"
+              style={{
+                background: '#B67C52',
+                borderRadius: '12px',
+                height: '48px',
+                padding: '14px 28px',
+                boxShadow: '0 12px 24px rgba(182,124,82,0.18)',
+              }}
+            >
+              Book Now
+            </motion.button>
             {user ? (
               <div className="relative">
                 <button
@@ -256,13 +266,21 @@ export default function Navbar() {
                   <button onClick={handleSignOut} className="text-red-400 text-sm font-montserrat text-center py-2">Sign Out</button>
                 </>
               ) : (
-                <Link
-                  to="/admin-login"
-                  className="font-montserrat font-semibold text-xs px-5 py-3 rounded-full border text-center mt-2"
-                  style={{ borderColor: '#7B4A1E', color: '#7B4A1E' }}
-                >
-                  ADMIN LOGIN
-                </Link>
+                <>
+                  <button
+                    onClick={() => { navigate('/booking'); setMenuOpen(false); }}
+                    className="w-full bg-[#B67C52] text-white py-3 rounded-xl text-sm font-semibold transition-all duration-300 hover:bg-[#9d6a44]"
+                  >
+                    Book Now
+                  </button>
+                  <Link
+                    to="/admin-login"
+                    className="font-montserrat font-semibold text-xs px-5 py-3 rounded-full border text-center mt-2"
+                    style={{ borderColor: '#7B4A1E', color: '#7B4A1E' }}
+                  >
+                    ADMIN LOGIN
+                  </Link>
+                </>
               )}
             </div>
           </motion.div>

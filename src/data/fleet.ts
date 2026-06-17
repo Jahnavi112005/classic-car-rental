@@ -14,7 +14,7 @@ export const fleetCars: Car[] = [
     fuel_type: 'Petrol',
     price_per_day: 1799,
     images: ['/cars/i10.jpg'],
-    description: 'Easy to drive and fuel-efficient, ideal for short trips around Mysore.',
+    description: 'Easy to drive and fuel-efficient, ideal for short trips and city driving.',
     features: ['Air Conditioning', 'Power Steering', 'USB Charging', 'Spacious Cabin'],
     availability: true,
     security_deposit: 3000,
