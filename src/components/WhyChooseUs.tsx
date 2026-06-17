@@ -15,7 +15,7 @@ const features = [
   {
     icon: BadgeCheck,
     title: 'Best Price Guarantee',
-    description: 'Transparent pricing with no hidden charges. Best rates in Mysore, guaranteed.',
+    description: 'Transparent pricing with no hidden charges. Best rates, guaranteed.',
   },
   {
     icon: Car,
@@ -30,7 +30,7 @@ const features = [
   {
     icon: Compass,
     title: 'Flexible Travel',
-    description: 'Go wherever you want, whenever you want. Explore Mysore and beyond freely.',
+    description: 'Go wherever you want, whenever you want. Explore freely and beyond.',
   },
   {
     icon: Sparkles,
@@ -67,7 +67,7 @@ export default function WhyChooseUs() {
           </h2>
           <div className="w-20 h-0.5 bg-gradient-to-r from-transparent via-brown to-transparent mx-auto mb-6" />
           <p className="text-stone max-w-lg mx-auto font-poppins">
-            We don't just rent cars — we deliver experiences. Here's why thousands trust Classic Car Rental Mysore.
+            We don't just rent cars — we deliver experiences. Here's why thousands trust Classic Car Rental.
           </p>
         </motion.div>
 

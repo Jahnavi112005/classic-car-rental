@@ -49,14 +49,12 @@ export default function Footer({ onBranchClick }: FooterProps = {}) {
                 <div className="font-playfair text-xl font-bold text-gradient-brown leading-none">
                   CLASSIC CAR RENTAL
                 </div>
-                <div className="font-montserrat text-xs text-brown/60 tracking-[0.3em] uppercase mt-1">
-                  MYSORE
-                </div>
+                
               </div>
             </Link>
 
             <p className="text-stone font-poppins text-sm leading-relaxed mb-6 max-w-xs">
-              Premium self-drive car rental in Mysore. Experience luxury, comfort, and complete freedom
+              Premium self-drive car rental. Experience luxury, comfort, and complete freedom
               on every journey. Your trusted travel partner since 2015.
             </p>
 
@@ -191,7 +189,7 @@ export default function Footer({ onBranchClick }: FooterProps = {}) {
       <div className="border-t border-brown/10 py-6 px-4">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
           <p className="text-stone text-xs font-poppins text-center md:text-left">
-            © {currentYear} Classic Car Rental Mysore. All Rights Reserved.
+            © {currentYear} Classic Car Rental. All Rights Reserved.
           </p>
           <div className="flex items-center gap-6">
             <Link to="#" className="text-xs text-stone hover:text-brown font-poppins transition-colors">Privacy Policy</Link>

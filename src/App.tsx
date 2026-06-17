@@ -3,6 +3,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import Home from './pages/Home';
 import FleetPage from './pages/FleetPage';
 import CarDetail from './pages/CarDetail';
+import BookingPage from './pages/BookingPage';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import AdminLogin from './pages/AdminLogin';
@@ -32,6 +33,7 @@ export default function App() {
         <Route path="/login" element={<PageWrapper><Login /></PageWrapper>} />
         <Route path="/register" element={<PageWrapper><Register /></PageWrapper>} />
         <Route path="/admin-login" element={<PageWrapper><AdminLogin /></PageWrapper>} />
+        <Route path="/booking" element={<PageWrapper><BookingPage /></PageWrapper>} />
         <Route path="/dashboard" element={<PageWrapper><UserDashboard /></PageWrapper>} />
         <Route path="/admin" element={<PageWrapper><AdminPanel /></PageWrapper>} />
         <Route path="*" element={<PageWrapper><NotFound /></PageWrapper>} />
