@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Menu, X, LogOut, User, LayoutDashboard, Shield, Car } from 'lucide-react';
+import { Menu, X, LogOut, User, LayoutDashboard, Shield } from 'lucide-react';
+import logoImg from '../assets/classic-car-rental-logo.png';
 import { useAuth } from '../context/AuthContext';
 
 const navLinks = [
@@ -74,29 +75,33 @@ export default function Navbar() {
       }}
     >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-18 py-3">
-          {/* Logo */}
-          <Link to="/" className="flex items-center gap-4 group">
-              <div className="w-14 h-14 rounded-xl overflow-hidden flex items-center justify-center bg-white shadow-sm transition-all duration-300">
-              <img
-                src="/assets/classic-car-logo.svg"
-                alt="Classic Car Rental Logo"
-                className="w-full h-full object-contain"
-              />
-            </div>
-            <div>
-              <div
-                className="font-montserrat text-sm font-bold leading-none tracking-wide transition-colors duration-300"
-                style={{ color: isLight ? '#2A1A0A' : '#D4A44A' }}
+        <div className="flex items-center justify-between h-[64px] lg:h-[80px]">
+          {/* Logo + Brand (left) */}
+          <Link to="/" className="flex items-center gap-3 z-20" style={{ paddingRight: 6, marginLeft: -34 }}>
+            <img
+              src={logoImg}
+              alt="Classic Car Rentals"
+              className="h-[56px] md:h-[72px] lg:h-[84px] w-auto object-contain transform transition-transform duration-300 ease-[cubic-bezier(.4,0,.2,1)] hover:scale-[1.03]"
+              style={{ display: 'block', transform: 'translateY(2px)' }}
+            />
+            <div className="flex flex-col leading-tight">
+              <span
+                className="font-montserrat"
+                style={{ fontWeight: 700, color: isLight ? '#1F1F1F' : '#F6EBD9', letterSpacing: '1px', lineHeight: 1 }}
               >
-                CLASSIC CAR RENTAL
-              </div>
-            
+                CLASSIC CAR RENTALS
+              </span>
+              <span
+                className="font-poppins text-[11px] uppercase"
+                style={{ color: isLight ? '#A67C52' : '#D4A44A', letterSpacing: '3px', marginTop: 2 }}
+              >
+                PREMIUM SELF DRIVE EXPERIENCE
+              </span>
             </div>
           </Link>
 
-          {/* Desktop Nav */}
-          <div className="hidden lg:flex items-center gap-7">
+          {/* Desktop Nav - centered */}
+          <div className="absolute left-1/2 transform -translate-x-1/2 hidden lg:flex items-center gap-8">
             {navLinks.map((link) => {
               const isActive =
                 link.href === '/'
@@ -139,76 +144,39 @@ export default function Navbar() {
             })}
           </div>
 
-          {/* Right */}
-          <div className="hidden lg:flex items-center gap-3">
+          {/* Right - Book Now & Admin Login */}
+          <div className="hidden lg:flex items-center gap-4 z-20">
             <motion.button
-              whileHover={{ y: -2, scale: 1.01 }}
+              whileHover={{ scale: 1.03 }}
               whileTap={{ scale: 0.98 }}
-              onClick={() => navigate('/booking')}
-              className="inline-flex items-center justify-center font-montserrat font-semibold text-sm text-white transition-all duration-300"
+              onClick={() => window.dispatchEvent(new CustomEvent('openBookingForm'))}
+              className="inline-flex items-center justify-center font-montserrat font-semibold text-sm text-white transition-all"
               style={{
                 background: '#B67C52',
                 borderRadius: '12px',
                 height: '48px',
-                padding: '14px 28px',
-                boxShadow: '0 12px 24px rgba(182,124,82,0.18)',
+                padding: '12px 22px',
+                boxShadow: '0 12px 24px rgba(182,124,82,0.12)',
+                transition: 'transform 0.3s ease',
               }}
             >
               Book Now
             </motion.button>
-            {user ? (
-              <div className="relative">
-                <button
-                  onClick={() => setDropdownOpen(!dropdownOpen)}
-                  className="flex items-center gap-2 font-montserrat font-semibold text-xs px-4 py-2.5 rounded-full border transition-all duration-300"
-                  style={
-                    isLight
-                      ? { borderColor: '#7B4A1E', color: '#7B4A1E', background: 'transparent' }
-                      : { borderColor: '#D4A44A', color: '#D4A44A', background: 'transparent' }
-                  }
-                >
-                  <User className="w-3.5 h-3.5" />
-                  {profile?.name?.split(' ')[0] || 'Account'}
-                </button>
-                <AnimatePresence>
-                  {dropdownOpen && (
-                    <motion.div
-                      initial={{ opacity: 0, y: 8, scale: 0.95 }}
-                      animate={{ opacity: 1, y: 0, scale: 1 }}
-                      exit={{ opacity: 0, y: 8, scale: 0.95 }}
-                      transition={{ duration: 0.2 }}
-                      className="absolute right-0 mt-2 w-52 rounded-xl shadow-lg overflow-hidden border"
-                      style={{ background: '#1A1A1A', borderColor: 'rgba(212,164,74,0.2)' }}
-                    >
-                      <Link to="/dashboard" onClick={() => setDropdownOpen(false)} className="flex items-center gap-3 px-4 py-3 text-sm text-gray-200 hover:bg-gold/10 hover:text-gold transition-colors">
-                        <LayoutDashboard className="w-4 h-4" />My Dashboard
-                      </Link>
-                      {profile?.role === 'admin' && (
-                        <Link to="/admin" onClick={() => setDropdownOpen(false)} className="flex items-center gap-3 px-4 py-3 text-sm text-gray-200 hover:bg-gold/10 hover:text-gold transition-colors">
-                          <Shield className="w-4 h-4" />Admin Panel
-                        </Link>
-                      )}
-                      <button onClick={handleSignOut} className="flex items-center gap-3 px-4 py-3 text-sm text-red-400 hover:bg-red-400/10 transition-colors w-full">
-                        <LogOut className="w-4 h-4" />Sign Out
-                      </button>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
-            ) : (
-              <Link
-                to="/admin-login"
-                className="flex items-center gap-2 font-montserrat font-semibold text-xs px-5 py-2.5 rounded-full border transition-all duration-300 hover:opacity-80"
-                style={
-                  isLight
-                    ? { borderColor: '#2A1A0A', color: '#2A1A0A', background: 'transparent' }
-                    : { borderColor: '#D4A44A', color: '#D4A44A', background: 'transparent' }
-                }
-              >
-                <Shield className="w-3.5 h-3.5" />
-                ADMIN LOGIN
-              </Link>
-            )}
+            <Link
+              to="/admin-login"
+              className="inline-flex items-center justify-center font-montserrat font-semibold text-sm transition-all"
+              style={{
+                border: '1.5px solid rgba(123,74,30,0.18)',
+                color: isLight ? '#2A1A0A' : '#D4A44A',
+                borderRadius: '10px',
+                height: '44px',
+                padding: '10px 18px',
+                background: isLight ? 'transparent' : 'rgba(255,255,255,0.04)',
+                transition: 'transform 0.3s ease',
+              }}
+            >
+              ADMIN LOGIN
+            </Link>
           </div>
 
           {/* Mobile toggle */}
@@ -268,7 +236,7 @@ export default function Navbar() {
               ) : (
                 <>
                   <button
-                    onClick={() => { navigate('/booking'); setMenuOpen(false); }}
+                    onClick={() => { window.dispatchEvent(new CustomEvent('openBookingForm')); setMenuOpen(false); }}
                     className="w-full bg-[#B67C52] text-white py-3 rounded-xl text-sm font-semibold transition-all duration-300 hover:bg-[#9d6a44]"
                   >
                     Book Now
