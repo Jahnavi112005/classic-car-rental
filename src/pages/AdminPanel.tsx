@@ -106,7 +106,7 @@ export default function AdminPanel() {
               <h1 className="font-playfair text-3xl font-bold text-earth">
                 Admin <span className="text-gradient-brown">Dashboard</span>
               </h1>
-              <p className="text-stone font-poppins text-sm">Classic Car Rental Mysore - Control Panel</p>
+              <p className="text-stone font-poppins text-sm">Classic Car Rental - Control Panel</p>
             </div>
           </div>
         </div>

@@ -59,7 +59,7 @@ export default function BookingSearch() {
             <h2 className="font-playfair text-2xl font-bold text-cream mb-2">
               Find Your Perfect <span className="text-gradient-gold">Luxury Car</span>
             </h2>
-            <p className="text-gray-text text-sm font-poppins">Premium self-drive cars available across Mysore</p>
+            <p className="text-gray-text text-sm font-poppins">Premium self-drive cars available across the city and beyond</p>
           </div>
 
           {/* Form Grid */}
@@ -74,7 +74,7 @@ export default function BookingSearch() {
                 type="text"
                 value={form.pickupLocation}
                 onChange={e => handleChange('pickupLocation', e.target.value)}
-                placeholder="Mysore City, Karnataka"
+                placeholder="City, State"
                 className="input-luxury"
               />
             </div>

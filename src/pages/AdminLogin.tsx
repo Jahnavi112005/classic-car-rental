@@ -64,7 +64,7 @@ export default function AdminLogin() {
 
           <div className="bg-brown/5 border border-brown/20 rounded-xl p-4 mb-6">
             <p className="text-xs font-poppins text-stone text-center">
-              This portal is restricted to administrators of Classic Car Rental Mysore.
+              This portal is restricted to administrators of Classic Car Rental.
             </p>
           </div>
 

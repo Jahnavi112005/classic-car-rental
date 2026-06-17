@@ -4,10 +4,13 @@ const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
 let _supabase = null;
+
 if (supabaseUrl && supabaseAnonKey) {
   _supabase = createClient(supabaseUrl, supabaseAnonKey);
 } else {
-  console.warn('VITE_SUPABASE_URL or VITE_SUPABASE_ANON_KEY is not set. Supabase client not initialized. Using fallback no-op client.');
+  console.warn(
+    'VITE_SUPABASE_URL or VITE_SUPABASE_ANON_KEY is not set. Supabase client not initialized. Using fallback no-op client.'
+  );
 
   const noopResponse = { data: null, error: null };
 
@@ -25,14 +28,21 @@ if (supabaseUrl && supabaseAnonKey) {
     like() { return this; },
     ilike() { return this; },
     neq() { return this; },
-    then(resolve: any) { resolve(noopResponse); return Promise.resolve(noopResponse); },
-    catch() { return Promise.resolve(noopResponse); },
+    then(resolve: any) {
+      resolve(noopResponse);
+      return Promise.resolve(noopResponse);
+    },
+    catch() {
+      return Promise.resolve(noopResponse);
+    },
   };
 
   const fallback = {
     auth: {
       getSession: () => Promise.resolve({ data: { session: null }, error: null }),
-      onAuthStateChange: (_cb: any) => ({ data: { subscription: { unsubscribe: () => {} } } }),
+      onAuthStateChange: (_cb: any) => ({
+        data: { subscription: { unsubscribe: () => {} } },
+      }),
       signUp: async () => ({ data: null, error: null }),
       signInWithPassword: async () => ({ data: null, error: null }),
       signOut: async () => ({ error: null }),
@@ -45,7 +55,6 @@ if (supabaseUrl && supabaseAnonKey) {
 }
 
 export const supabase = _supabase as any;
-
 export type Profile = {
   id: string;
   name: string;
@@ -57,16 +66,18 @@ export type Profile = {
 };
 
 export type Car = {
-  id: string;
+  id: string | number;
   name: string;
   brand: string;
   model: string;
-  year: number;
+  year: number | string;
+  yearRange?: string;
   fuel_type: 'Petrol' | 'Diesel' | 'Electric' | 'Hybrid' | 'CNG';
   transmission: 'Manual' | 'Automatic';
   seats: number;
   price_per_day: number;
   category: 'Hatchback' | 'Sedan' | 'SUV' | 'Luxury' | 'Premium Luxury';
+  featured?: boolean;
   description: string;
   images: string[];
   features: string[];

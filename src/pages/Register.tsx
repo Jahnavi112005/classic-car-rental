@@ -70,7 +70,7 @@ export default function Register() {
               <Crown className="w-8 h-8 text-cream" />
             </div>
             <h1 className="font-playfair text-2xl font-bold text-earth">Create Account</h1>
-            <p className="text-stone font-poppins text-sm mt-1">Join Classic Car Rental Mysore</p>
+            <p className="text-stone font-poppins text-sm mt-1">Join Classic Car Rental</p>
             <div className="w-12 h-0.5 bg-brown-gradient mx-auto mt-3" />
           </div>
 
