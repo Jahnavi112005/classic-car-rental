@@ -72,9 +72,19 @@ export default function Contact() {
                   <h4 className="font-montserrat font-semibold text-earth mb-1">Our Location</h4>
                   <p className="text-stone font-poppins text-sm leading-relaxed">
                     Classic Car Rental<br />
-                    Mysore, Karnataka - 570001<br />
+                    653, 4th Main, near by JSS Dental College<br />
+                    Shivarathreeshwara Nagar, Bannimantap<br />
+                    Mysuru, Karnataka 570015<br />
                     India
                   </p>
+                  <a
+                    href="https://maps.app.goo.gl/dh2JPFBSuYRkwKWA7"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex mt-3 items-center gap-2 text-sm font-semibold text-brown hover:underline"
+                  >
+                    Open in Google Maps
+                  </a>
                 </div>
               </div>
 
@@ -140,10 +150,17 @@ export default function Contact() {
 
             {/* Map Embed Placeholder */}
             <div className="rounded-xl overflow-hidden border border-brown/20 h-48 bg-cream flex items-center justify-center">
-              <div className="text-center">
+                <div className="text-center">
                 <MapPin className="w-10 h-10 text-brown/40 mx-auto mb-3" />
-                <p className="text-stone font-poppins text-sm">Mysore, Karnataka, India</p>
-                <p className="text-stone/50 font-poppins text-xs mt-1">The City of Palaces</p>
+                <p className="text-stone font-poppins text-sm">653, 4th Main, near by JSS Dental College<br/>Shivarathreeshwara Nagar, Bannimantap<br/>Mysuru, Karnataka 570015</p>
+                <a
+                  href="https://maps.app.goo.gl/dh2JPFBSuYRkwKWA7"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="mt-3 inline-flex items-center justify-center gap-2 rounded-full bg-brown/10 px-4 py-2 text-sm text-brown font-montserrat"
+                >
+                  Open in Google Maps
+                </a>
               </div>
             </div>
 
