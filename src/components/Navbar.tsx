@@ -79,7 +79,7 @@ export default function Navbar() {
           <Link to="/" className="flex items-center gap-4 group">
               <div className="w-14 h-14 rounded-xl overflow-hidden flex items-center justify-center bg-white shadow-sm transition-all duration-300">
               <img
-                src="/assets/classic-car-logo.svg"
+                src="/assets/classic-car-logo.png"
                 alt="Classic Car Rental Logo"
                 className="w-full h-full object-contain"
               />
