@@ -1,7 +1,6 @@
 import { Routes, Route } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import Home from './pages/Home';
-import BookingRequestSection from './components/BookingRequestSection';
 import FleetPage from './pages/FleetPage';
 import CarDetail from './pages/CarDetail';
 import BookingPage from './pages/BookingPage';
@@ -39,8 +38,7 @@ export default function App() {
         <Route path="/admin" element={<PageWrapper><AdminPanel /></PageWrapper>} />
         <Route path="*" element={<PageWrapper><NotFound /></PageWrapper>} />
       </Routes>
-      {/* Global booking modal listener */}
-      <BookingRequestSection />
+      {/* BookingRequestSection removed per request */}
     </AnimatePresence>
   );
 }
