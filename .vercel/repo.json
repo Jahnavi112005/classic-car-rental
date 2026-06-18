@@ -1,0 +1,11 @@
+{
+  "remoteName": "origin",
+  "projects": [
+    {
+      "id": "prj_rwCpzk2btGsT39T3OIS9BsTAv7yc",
+      "name": "classic-car-rental",
+      "directory": ".",
+      "orgId": "team_mnPgON6lmx2FbznPNrzeykvf"
+    }
+  ]
+}
