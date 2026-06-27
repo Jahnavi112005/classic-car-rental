@@ -218,11 +218,7 @@ export default function BookingRequestSection(): JSX.Element {
     <>
       <section className="px-4 py-16 sm:px-6 lg:px-8 bg-cream">
         <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-12">
-            <div className="inline-flex items-center gap-2 rounded-full border bg-[#FFF5EA] px-4 py-2 text-xs uppercase tracking-[0.3em] text-brown">PREMIUM BOOKING</div>
-            <h2 className="font-playfair text-4xl md:text-5xl font-bold text-earth mt-6">Quick Booking Request</h2>
-            <p className="mt-4 text-stone max-w-2xl mx-auto text-base leading-8">Fill in a few details and we&apos;ll take care of the rest.</p>
-          </div>
+          {/* Header removed per request */}
 
           <div className="grid gap-8 lg:grid-cols-[2fr_1fr] items-start">
             <div className="luxury-card overflow-hidden rounded-[32px] border bg-white p-8 md:p-10">
@@ -253,11 +249,7 @@ export default function BookingRequestSection(): JSX.Element {
             </aside>
           </div>
 
-          <div className="mt-10 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            {featureTiles.map(tile => (
-              <div key={tile} className="rounded-[24px] border bg-white px-5 py-4 text-sm font-medium text-earth">{tile}</div>
-            ))}
-          </div>
+          {/* Removed duplicate feature tiles grid (was extra at page end) */}
         </div>
       </section>
 

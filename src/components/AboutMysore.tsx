@@ -1,30 +1,34 @@
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { ArrowRight, MapPin } from 'lucide-react';
+import mysorePalace from '../assets/mysore-palace.jpg';
+import chamundeshwari from '../assets/Chamundeshwari.jpg';
+import brindavanGardens from '../assets/BrindavanGardens.jpg';
+import srirangapatna from '../assets/Srirangapatna.jpg';
 
 const destinations = [
   {
     name: 'Mysore Palace',
     description: 'The iconic royal palace – a jewel of Indo-Saracenic architecture.',
-    image: 'https://images.pexels.com/photos/3881104/pexels-photo-3881104.jpeg?auto=compress&cs=tinysrgb&w=600',
+    image: mysorePalace,
     tag: 'Heritage',
   },
   {
     name: 'Chamundi Hills',
     description: 'Sacred hills with breathtaking panoramic views of Mysore city.',
-    image: 'https://images.pexels.com/photos/2372978/pexels-photo-2372978.jpeg?auto=compress&cs=tinysrgb&w=600',
+    image: chamundeshwari,
     tag: 'Spiritual',
   },
   {
     name: 'Brindavan Gardens',
     description: 'Terraced gardens with musical fountains illuminated at night.',
-    image: 'https://images.pexels.com/photos/1166209/pexels-photo-1166209.jpeg?auto=compress&cs=tinysrgb&w=600',
+    image: brindavanGardens,
     tag: 'Gardens',
   },
   {
     name: 'Srirangapatna',
     description: "Tipu Sultan's historic fort island on the Cauvery River.",
-    image: 'https://images.pexels.com/photos/1640777/pexels-photo-1640777.jpeg?auto=compress&cs=tinysrgb&w=600',
+    image: srirangapatna,
     tag: 'History',
   },
 ];
