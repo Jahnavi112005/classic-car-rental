@@ -6,6 +6,7 @@ import {
   AlertCircle, Shield, Plus, Trash2, ToggleLeft, ToggleRight
 } from 'lucide-react';
 import { bookingApi, inquiryApi, vehicleApi } from '../services/api';
+import AdminBookings from './AdminBookings';
 import { Booking, Car as CarType, Inquiry } from '../types';
 import { useAuth } from '../context/AuthContext';
 import Navbar from '../components/Navbar';
@@ -22,7 +23,7 @@ const statusColors: Record<string, string> = {
 export default function AdminPanel() {
   const { user, profile, loading: authLoading } = useAuth();
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState<'overview' | 'bookings' | 'cars' | 'inquiries'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'bookings' | 'cars' | 'inquiries' | 'bookingManagement'>('overview');
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [cars, setCars] = useState<CarType[]>([]);
   const [inquiries, setInquiries] = useState<Inquiry[]>([]);
@@ -82,12 +83,14 @@ export default function AdminPanel() {
     { label: 'New Inquiries', value: unreadInquiries, icon: Calendar, color: 'text-orange-600' },
   ];
 
-  const tabs = [
+  const canManageBookings = profile?.email === 'booking@classiccarrentals.in' || profile?.email === 'owner@classiccarrentals.in';
+  const tabs: Array<{ key: 'overview' | 'bookings' | 'cars' | 'inquiries' | 'bookingManagement'; label: string }> = [
     { key: 'overview', label: 'Overview' },
     { key: 'bookings', label: `Bookings (${bookings.length})` },
     { key: 'cars', label: `Fleet (${cars.length})` },
     { key: 'inquiries', label: `Inquiries (${unreadInquiries})` },
-  ] as const;
+  ];
+  if (canManageBookings) tabs.push({ key: 'bookingManagement', label: 'Booking Management' });
 
   if (authLoading || loading) {
     return <div className="min-h-screen bg-cream flex items-center justify-center"><div className="w-16 h-16 border-4 border-brown/20 border-t-brown rounded-full animate-spin" /></div>;
@@ -201,6 +204,12 @@ export default function AdminPanel() {
                   </div>
                 );
               })}
+            </div>
+          )}
+
+          {activeTab === 'bookingManagement' && canManageBookings && (
+            <div>
+              <AdminBookings />
             </div>
           )}
 

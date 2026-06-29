@@ -2,7 +2,9 @@ import mongoose from 'mongoose';
 
 const bookingSchema = new mongoose.Schema(
   {
-    user_id: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+    bookingId: { type: String, unique: true, index: true },
+    user_id: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    customer_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Customer' },
     car_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Vehicle', required: true },
     pickup_location: { type: String, required: true },
     drop_location: { type: String, required: true },
@@ -19,7 +21,32 @@ const bookingSchema = new mongoose.Schema(
       default: 'pending',
     },
     payment_status: { type: String, enum: ['pending', 'paid', 'refunded'], default: 'pending' },
-    notes: { type: String, default: '' },
+    notes: [
+      {
+        admin: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+        text: { type: String },
+        createdAt: { type: Date, default: Date.now },
+      },
+    ],
+    documents: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Document' }],
+    verification_status: { type: String, enum: ['pending', 'partial', 'verified'], default: 'pending' },
+    timeline: [
+      {
+        event: { type: String },
+        ts: { type: Date, default: Date.now },
+        by: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+        meta: { type: Object },
+      },
+    ],
+    status_history: [
+      {
+        from: { type: String },
+        to: { type: String },
+        by: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+        note: { type: String },
+        ts: { type: Date, default: Date.now },
+      },
+    ],
   },
   { timestamps: true }
 );

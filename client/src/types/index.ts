@@ -11,6 +11,7 @@ export type Session = {
 export type Profile = {
   id: string;
   name: string;
+  email?: string;
   phone: string;
   role: 'user' | 'admin';
   avatar_url: string;
@@ -44,6 +45,8 @@ export type Car = {
 
 export type Booking = {
   id: string;
+  bookingId?: string;
+  document?: string | null;
   user_id: string;
   car_id: string | number;
   pickup_location: string;
@@ -58,6 +61,21 @@ export type Booking = {
   booking_status: 'pending' | 'approved' | 'rejected' | 'completed' | 'cancelled';
   payment_status: 'pending' | 'paid' | 'refunded';
   notes: string;
+  documents?: Array<{
+    id: string;
+    fileUrl: string;
+    ocr?: Record<string, unknown>;
+  }>;
+  verification_status?: 'pending' | 'partial' | 'verified';
+  customers?: {
+    id?: string;
+    customerId?: string;
+    name?: string;
+    phone?: string;
+    email?: string;
+  };
+  timeline?: Array<{ event: string; ts: string; by?: { id?: string; name?: string } ; meta?: Record<string, unknown> }>;
+  status_history?: Array<{ from?: string; to?: string; by?: { id?: string; name?: string }; note?: string; ts?: string }>;
   created_at: string;
   cars?: Car;
   profiles?: Profile;

@@ -4,6 +4,8 @@ import { motion } from 'framer-motion';
 import { ArrowLeft, CheckCircle2, FileText, Car } from 'lucide-react';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
+import { documentApi, bookingApi } from '../services/api';
+import { Booking } from '../types';
 
 const vehicleOptions = [
   'All Vehicles',
@@ -21,25 +23,31 @@ const tomorrow = new Date(Date.now() + 86400000).toISOString().split('T')[0];
 type BookingForm = {
   fullName: string;
   mobileNumber: string;
+  email: string;
   whatsappNumber: string;
   vehicleSelection: string;
   pickupDate: string;
+  pickupTime?: string;
   returnDate: string;
+  returnTime?: string;
   pickupLocation: string;
-  drivingLicense: File | null;
-  aadhaarCard: File | null;
+  dropLocation?: string;
+  notes?: string;
+  governmentId: File | null;
+  governmentIdType: 'driving_license' | 'aadhaar' | 'passport' | '';
 };
 
 const initialForm: BookingForm = {
   fullName: '',
   mobileNumber: '',
+  email: '',
   whatsappNumber: '',
   vehicleSelection: 'All Vehicles',
   pickupDate: today,
   returnDate: tomorrow,
   pickupLocation: '',
-  drivingLicense: null,
-  aadhaarCard: null,
+  governmentId: null,
+  governmentIdType: '',
 };
 
 export default function BookingPage() {
@@ -57,13 +65,14 @@ export default function BookingPage() {
 
     if (!form.fullName.trim()) nextErrors.fullName = 'Full name is required.';
     if (!form.mobileNumber.trim()) nextErrors.mobileNumber = 'Mobile number is required.';
+    if (!form.email?.trim()) nextErrors.email = 'Email is required.';
     if (!form.whatsappNumber.trim()) nextErrors.whatsappNumber = 'WhatsApp number is required.';
     if (!form.vehicleSelection.trim()) nextErrors.vehicleSelection = 'Vehicle selection is required.';
     if (!form.pickupDate.trim()) nextErrors.pickupDate = 'Pickup date is required.';
     if (!form.returnDate.trim()) nextErrors.returnDate = 'Return date is required.';
     if (!form.pickupLocation.trim()) nextErrors.pickupLocation = 'Pickup location is required.';
-    if (!form.drivingLicense) nextErrors.drivingLicense = 'Driving license upload is required.';
-    if (!form.aadhaarCard) nextErrors.aadhaarCard = 'Aadhaar card upload is required.';
+    if (!form.governmentId) nextErrors.governmentId = 'Upload a government ID.';
+    if (!form.governmentIdType) nextErrors.governmentIdType = 'Select document type.';
     if (form.returnDate && form.pickupDate && form.returnDate < form.pickupDate) {
       nextErrors.returnDate = 'Return date must be after pickup date.';
     }
@@ -79,11 +88,47 @@ export default function BookingPage() {
       setSuccess('');
       return;
     }
+    (async () => {
+      try {
+        // upload document first
+        const fd = new FormData();
+        fd.append('file', form.governmentId as Blob);
+        fd.append('type', form.governmentIdType || 'other');
+        const doc = await documentApi.upload(fd);
 
-    setSuccess('Booking request submitted successfully. We will contact you shortly.');
-    setErrors({});
-    setForm(initialForm);
-    setTimeout(() => setSuccess(''), 6000);
+        // create booking payload
+        type CustomerPayload = { name: string; email?: string; phone?: string; address?: string };
+        const payload: Partial<Booking> & { customer?: CustomerPayload } = {
+          pickup_location: form.pickupLocation,
+          drop_location: form.dropLocation || '',
+          pickup_date: form.pickupDate,
+          drop_date: form.returnDate,
+          pickup_time: form.pickupTime || '10:00',
+          drop_time: form.returnTime || '10:00',
+          notes: form.notes || '',
+          car_id: form.vehicleSelection,
+          total_days: 1,
+          total_amount: 0,
+          document: doc._id || doc.id || null,
+          customer: {
+            name: form.fullName,
+            email: form.email,
+            phone: form.mobileNumber,
+          },
+        };
+
+        // try guest create first; if user logged in, server will handle accordingly
+        await bookingApi.createGuest(payload);
+        setSuccess('Booking request submitted successfully. We will contact you shortly.');
+        setErrors({});
+        setForm(initialForm);
+        setTimeout(() => setSuccess(''), 6000);
+      } catch (err: unknown) {
+        setSuccess('');
+        const message = err instanceof Error ? err.message : String(err);
+        setErrors({ form: message || 'Failed to create booking' });
+      }
+    })();
   }
 
   return (
@@ -222,33 +267,67 @@ export default function BookingPage() {
 
                   <div className="grid gap-5 md:grid-cols-2">
                     <div>
-                      <label className="text-sm font-semibold text-earth font-montserrat">Driving License Upload</label>
-                      <label className="mt-2 flex items-center gap-3 rounded-2xl border border-[#B67C52]/20 bg-white px-4 py-3 cursor-pointer text-sm text-[#7B4A1E] shadow-sm transition hover:border-[#B67C52]">
-                        <FileText className="w-5 h-5" />
-                        <span>{form.drivingLicense?.name || 'Upload license'}</span>
-                        <input
-                          type="file"
-                          accept="image/*,.pdf"
-                          className="hidden"
-                          onChange={e => handleChange('drivingLicense', e.target.files?.[0] ?? null)}
-                        />
-                      </label>
-                      {errors.drivingLicense && <p className="text-red-500 text-xs mt-2">{errors.drivingLicense}</p>}
+                      <label className="text-sm font-semibold text-earth font-montserrat">Email Address</label>
+                      <input
+                        type="email"
+                        value={form.email}
+                        onChange={e => handleChange('email', e.target.value)}
+                        placeholder="your@email.com"
+                        className="input-luxury mt-2"
+                      />
+                      {errors.email && <p className="text-red-500 text-xs mt-2">{errors.email}</p>}
                     </div>
                     <div>
-                      <label className="text-sm font-semibold text-earth font-montserrat">Aadhaar Card Upload</label>
-                      <label className="mt-2 flex items-center gap-3 rounded-2xl border border-[#B67C52]/20 bg-white px-4 py-3 cursor-pointer text-sm text-[#7B4A1E] shadow-sm transition hover:border-[#B67C52]">
+                      <label className="text-sm font-semibold text-earth font-montserrat">Return Time</label>
+                      <input type="time" value={form.returnTime || ''} onChange={e => handleChange('returnTime', e.target.value)} className="input-luxury mt-2" />
+                    </div>
+                  </div>
+
+                  <div className="grid gap-5 md:grid-cols-2">
+                    <div>
+                      <label className="text-sm font-semibold text-earth font-montserrat">Pickup Time</label>
+                      <input type="time" value={form.pickupTime || ''} onChange={e => handleChange('pickupTime', e.target.value)} className="input-luxury mt-2" />
+                    </div>
+                    <div>
+                      <label className="text-sm font-semibold text-earth font-montserrat">Drop Location</label>
+                      <input type="text" value={form.dropLocation || ''} onChange={e => handleChange('dropLocation', e.target.value)} placeholder="Drop off address" className="input-luxury mt-2" />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="text-sm font-semibold text-earth font-montserrat">Government ID</label>
+                    <div className="mt-2 flex items-center gap-3">
+                      <select value={form.governmentIdType} onChange={e => handleChange('governmentIdType', e.target.value)} className="input-luxury">
+                        <option value="">Select document type</option>
+                        <option value="driving_license">Driving License</option>
+                        <option value="aadhaar">Aadhaar Card</option>
+                        <option value="passport">Passport</option>
+                      </select>
+                      <label className="flex items-center gap-3 rounded-2xl border border-[#B67C52]/20 bg-white px-4 py-3 cursor-pointer text-sm text-[#7B4A1E] shadow-sm transition hover:border-[#B67C52]">
                         <FileText className="w-5 h-5" />
-                        <span>{form.aadhaarCard?.name || 'Upload Aadhaar'}</span>
+                        <span>{form.governmentId?.name || 'Upload document (JPG/PNG/PDF, max 10MB)'}</span>
                         <input
                           type="file"
                           accept="image/*,.pdf"
                           className="hidden"
-                          onChange={e => handleChange('aadhaarCard', e.target.files?.[0] ?? null)}
+                          onChange={e => {
+                            const f = e.target.files?.[0] ?? null;
+                            if (f && f.size > 10 * 1024 * 1024) {
+                              setErrors(prev => ({ ...prev, governmentId: 'File too large (max 10MB)' }));
+                              return;
+                            }
+                            handleChange('governmentId', f);
+                          }}
                         />
                       </label>
-                      {errors.aadhaarCard && <p className="text-red-500 text-xs mt-2">{errors.aadhaarCard}</p>}
                     </div>
+                    {errors.governmentId && <p className="text-red-500 text-xs mt-2">{errors.governmentId}</p>}
+                    {errors.governmentIdType && <p className="text-red-500 text-xs mt-2">{errors.governmentIdType}</p>}
+                  </div>
+
+                  <div>
+                    <label className="text-sm font-semibold text-earth font-montserrat">Additional Notes (optional)</label>
+                    <textarea value={form.notes || ''} onChange={e => handleChange('notes', e.target.value)} className="input-luxury mt-2 h-24" />
                   </div>
 
                   <button

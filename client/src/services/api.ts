@@ -1,6 +1,8 @@
 import axios from 'axios';
 import { Booking, Car, Inquiry, Profile, Session, Testimonial } from '../types';
 
+type CustomerPayload = { name: string; email?: string; phone?: string; address?: string };
+
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
 const TOKEN_KEY = 'classic_car_token';
 
@@ -69,8 +71,52 @@ export const bookingApi = {
     const { data } = await api.post<Booking>('/bookings', payload);
     return data;
   },
+  async createGuest(payload: Partial<Booking> & { customer?: CustomerPayload }) {
+    const { data } = await api.post<Booking>('/bookings/guest', payload);
+    return data;
+  },
   async update(id: string, payload: Partial<Booking>) {
     const { data } = await api.patch<Booking>(`/bookings/${id}`, payload);
+    return data;
+  },
+  async get(id: string) {
+    const { data } = await api.get<Booking>(`/bookings/${id}`);
+    return data;
+  },
+};
+
+export const documentApi = {
+  async upload(formData: FormData) {
+    const { data } = await api.post('/documents/upload', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return data;
+  },
+};
+
+export const bookingActions = {
+  async action(id: string, payload: { action: string; vehicleId?: string; note?: string }) {
+    const { data } = await api.post(`/bookings/${id}/action`, payload);
+    return data;
+  },
+  async addNote(id: string, text: string) {
+    const { data } = await api.post(`/bookings/${id}/notes`, { text });
+    return data;
+  },
+  async assign(id: string, vehicleId: string, note?: string) {
+    const { data } = await api.post(`/bookings/${id}/assign`, { vehicleId, note });
+    return data;
+  },
+  async changeStatus(id: string, status: string, note?: string) {
+    const { data } = await api.post(`/bookings/${id}/status`, { status, note });
+    return data;
+  },
+  async exportCSV(params?: Record<string, string>) {
+    const resp = await api.get('/bookings/export/csv', { params, responseType: 'blob' });
+    return resp.data;
+  },
+  async audit(id: string) {
+    const { data } = await api.get(`/bookings/${id}/audit`);
     return data;
   },
 };

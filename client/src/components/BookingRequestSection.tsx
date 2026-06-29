@@ -36,8 +36,10 @@ export default function BookingRequestSection(): JSX.Element {
       setModalOpen(true);
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
-    window.addEventListener('openBookingForm', handleOpen as EventListener);
-    return () => window.removeEventListener('openBookingForm', handleOpen as EventListener);
+    // Backwards compatibility: support legacy 'openBookingForm' event, but prefer direct route navigation.
+    const handler = handleOpen as EventListener;
+    window.addEventListener('openBookingForm', handler);
+    return () => window.removeEventListener('openBookingForm', handler);
   }, []);
 
   function handleChange(field: keyof BookingRequestForm, value: BookingRequestValue) {
