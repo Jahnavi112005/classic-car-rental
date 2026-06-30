@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { ArrowLeft, CheckCircle2, FileText, Car } from 'lucide-react';
+import { getCountrySupportText, getDocumentHelperText, getDocumentPlaceholder, validateDocumentNumber, formatDocumentNumberInput, sanitizeDocumentNumber, type IdentityDocumentType } from '../utils/documentValidation';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import { documentApi, bookingApi } from '../services/api';
@@ -34,7 +35,9 @@ type BookingForm = {
   dropLocation?: string;
   notes?: string;
   governmentId: File | null;
-  governmentIdType: 'driving_license' | 'aadhaar' | 'passport' | '';
+  governmentIdType: IdentityDocumentType;
+  documentNumber: string;
+  country: string;
 };
 
 const initialForm: BookingForm = {
@@ -48,16 +51,25 @@ const initialForm: BookingForm = {
   pickupLocation: '',
   governmentId: null,
   governmentIdType: '',
+  documentNumber: '',
+  country: '',
 };
 
 export default function BookingPage() {
   const [form, setForm] = useState<BookingForm>(initialForm);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [success, setSuccess] = useState('');
+  const [documentValidation, setDocumentValidation] = useState({ message: '', isValid: null as boolean | null });
 
   function handleChange(field: keyof BookingForm, value: string | File | null) {
     setForm(prev => ({ ...prev, [field]: value }));
     setErrors(prev => ({ ...prev, [field]: '' }));
+
+    if (field === 'documentNumber') {
+      const nextValue = String(value ?? '');
+      const validation = validateDocumentNumber(form.governmentIdType, nextValue);
+      setDocumentValidation({ message: validation.message, isValid: validation.isValid });
+    }
   }
 
   function validateForm() {
@@ -73,6 +85,15 @@ export default function BookingPage() {
     if (!form.pickupLocation.trim()) nextErrors.pickupLocation = 'Pickup location is required.';
     if (!form.governmentId) nextErrors.governmentId = 'Upload a government ID.';
     if (!form.governmentIdType) nextErrors.governmentIdType = 'Select document type.';
+    if (!form.documentNumber.trim()) {
+      nextErrors.documentNumber = 'Document number is required.';
+    } else {
+      const validation = validateDocumentNumber(form.governmentIdType, form.documentNumber);
+      if (validation.isValid === false) {
+        nextErrors.documentNumber = validation.message;
+      }
+    }
+    if (!form.country.trim()) nextErrors.country = 'Country is required.';
     if (form.returnDate && form.pickupDate && form.returnDate < form.pickupDate) {
       nextErrors.returnDate = 'Return date must be after pickup date.';
     }
@@ -94,7 +115,14 @@ export default function BookingPage() {
         const fd = new FormData();
         fd.append('file', form.governmentId as Blob);
         fd.append('type', form.governmentIdType || 'other');
+        fd.append('documentType', form.governmentIdType || 'other');
+        fd.append('fullName', form.fullName);
+        fd.append('documentNumber', sanitizeDocumentNumber(form.governmentIdType, form.documentNumber));
+        fd.append('country', form.country);
         const doc = await documentApi.upload(fd);
+        if (!doc || (doc.status !== 'verified' && doc.verificationStatus !== 'verified')) {
+          throw new Error(doc?.verificationMessage || 'Identity verification failed.');
+        }
 
         // create booking payload
         type CustomerPayload = { name: string; email?: string; phone?: string; address?: string };
@@ -119,7 +147,7 @@ export default function BookingPage() {
 
         // try guest create first; if user logged in, server will handle accordingly
         await bookingApi.createGuest(payload);
-        setSuccess('Booking request submitted successfully. We will contact you shortly.');
+        setSuccess(doc.verificationMessage || 'Booking request submitted successfully. We will contact you shortly.');
         setErrors({});
         setForm(initialForm);
         setTimeout(() => setSuccess(''), 6000);
@@ -297,11 +325,17 @@ export default function BookingPage() {
                   <div>
                     <label className="text-sm font-semibold text-earth font-montserrat">Government ID</label>
                     <div className="mt-2 flex items-center gap-3">
-                      <select value={form.governmentIdType} onChange={e => handleChange('governmentIdType', e.target.value)} className="input-luxury">
+                      <select value={form.governmentIdType} onChange={e => {
+                        const nextType = e.target.value as IdentityDocumentType;
+                        setForm(prev => ({ ...prev, governmentIdType: nextType, documentNumber: '' }));
+                        setErrors(prev => ({ ...prev, governmentIdType: '' }));
+                        setDocumentValidation({ message: '', isValid: null });
+                      }} className="input-luxury">
                         <option value="">Select document type</option>
                         <option value="driving_license">Driving License</option>
                         <option value="aadhaar">Aadhaar Card</option>
                         <option value="passport">Passport</option>
+                        <option value="pan">PAN Card</option>
                       </select>
                       <label className="flex items-center gap-3 rounded-2xl border border-[#B67C52]/20 bg-white px-4 py-3 cursor-pointer text-sm text-[#7B4A1E] shadow-sm transition hover:border-[#B67C52]">
                         <FileText className="w-5 h-5" />
@@ -320,6 +354,41 @@ export default function BookingPage() {
                           }}
                         />
                       </label>
+                    </div>
+                    <div className="grid gap-5 md:grid-cols-2 mt-4">
+                      <div>
+                        <label className="text-sm font-semibold text-earth font-montserrat">Document Number</label>
+                        <input type="text" value={form.documentNumber} onChange={e => {
+                          const formatted = formatDocumentNumberInput(form.governmentIdType, e.target.value);
+                          handleChange('documentNumber', formatted);
+                        }} placeholder={getDocumentPlaceholder(form.governmentIdType)} className="input-luxury mt-2" />
+                        {form.governmentIdType ? (
+                          <p className="text-[11px] text-stone mt-2">{getDocumentHelperText(form.governmentIdType)}</p>
+                        ) : null}
+                        {documentValidation.message ? (
+                          <p className={`text-xs mt-2 ${documentValidation.isValid ? 'text-green-600' : documentValidation.isValid === false ? 'text-amber-600' : 'text-stone'}`}>{documentValidation.message}</p>
+                        ) : null}
+                        {errors.documentNumber && <p className="text-red-500 text-xs mt-2">{errors.documentNumber}</p>}
+                      </div>
+                      <div>
+                        <label className="text-sm font-semibold text-earth font-montserrat">Country</label>
+                        <input type="text" value={form.country} onChange={e => handleChange('country', e.target.value)} placeholder="Country" className="input-luxury mt-2" />
+                        {errors.country && <p className="text-red-500 text-xs mt-2">{errors.country}</p>}
+                        {getCountrySupportText(form.country) ? (
+                          <div className="mt-2 rounded-xl border border-[#B67C52]/10 bg-[#FFF8EE] px-3 py-2 text-[11px] text-stone">
+                            <p className="font-semibold text-[#7B4A1E] mb-1">{getCountrySupportText(form.country)?.[0]}</p>
+                            {getCountrySupportText(form.country)?.slice(1).map(item => <p key={item}>{item}</p>)}
+                          </div>
+                        ) : null}
+                      </div>
+                    </div>
+                    <div className="mt-3 rounded-2xl border border-[#B67C52]/10 bg-[#FFF8EE] px-4 py-3 text-[11px] text-stone">
+                      <p className="font-semibold text-[#7B4A1E] mb-1">Accepted Formats:</p>
+                      <p>JPG, JPEG, PNG, PDF</p>
+                      <p className="font-semibold text-[#7B4A1E] mt-2 mb-1">Maximum Size:</p>
+                      <p>10 MB</p>
+                      <p className="font-semibold text-[#7B4A1E] mt-2 mb-1">Upload Guidance:</p>
+                      <p>Make sure the entire document is visible, with no blur, no flash reflection, all four corners visible, and upload the original document.</p>
                     </div>
                     {errors.governmentId && <p className="text-red-500 text-xs mt-2">{errors.governmentId}</p>}
                     {errors.governmentIdType && <p className="text-red-500 text-xs mt-2">{errors.governmentIdType}</p>}

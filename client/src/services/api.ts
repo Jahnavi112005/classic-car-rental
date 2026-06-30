@@ -1,7 +1,14 @@
 import axios from 'axios';
 import { Booking, Car, Inquiry, Profile, Session, Testimonial } from '../types';
 
-type CustomerPayload = { name: string; email?: string; phone?: string; address?: string };
+type CustomerPayload = {
+  name: string;
+  email?: string;
+  phone?: string;
+  address?: string;
+  documentNumber?: string;
+  country?: string;
+};
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
 const TOKEN_KEY = 'classic_car_token';

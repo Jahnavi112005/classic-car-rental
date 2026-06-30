@@ -1,14 +1,18 @@
 import { useState, useEffect } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useParams, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Fuel, Settings, Users, Star, CheckCircle, ArrowLeft, Calendar, MapPin, Phone } from 'lucide-react';
-import { bookingApi, vehicleApi } from '../services/api';
-import { Car } from '../types';
+import { Fuel, Settings, Users, Star, CheckCircle, ArrowLeft, Calendar, MapPin, Phone, FileText } from 'lucide-react';
+import { getCountrySupportText, getDocumentHelperText, getDocumentPlaceholder, validateDocumentNumber, formatDocumentNumberInput, sanitizeDocumentNumber } from '../utils/documentValidation';
+import { bookingApi, documentApi, vehicleApi } from '../services/api';
+import { Booking, Car } from '../types';
+import VehicleImage from '../components/VehicleImage';
 import { useAuth } from '../context/AuthContext';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import WhatsAppFloat from '../components/WhatsAppFloat';
 import { whatsAppUrl } from '../utils/whatsapp';
+
+type IdentityDocumentType = 'driving_license' | 'aadhaar' | 'passport' | 'pan' | '';
 
 export default function CarDetail() {
   const { id } = useParams<{ id: string }>();
@@ -17,8 +21,16 @@ export default function CarDetail() {
   const [bookLoading, setBookLoading] = useState(false);
   const [bookSuccess, setBookSuccess] = useState(false);
   const [bookError, setBookError] = useState('');
+  const [createdBooking, setCreatedBooking] = useState<Booking | null>(null);
+  const [documentForm, setDocumentForm] = useState({
+    fullName: '',
+    documentNumber: '',
+    documentType: '' as IdentityDocumentType,
+    country: '',
+    governmentId: null as File | null,
+  });
+  const [documentValidation, setDocumentValidation] = useState({ message: '', isValid: null as boolean | null });
   const { user } = useAuth();
-  const navigate = useNavigate();
 
   const today = new Date().toISOString().split('T')[0];
   const tomorrow = new Date(Date.now() + 86400000).toISOString().split('T')[0];
@@ -51,12 +63,17 @@ export default function CarDetail() {
   }
 
   async function handleBook() {
-    if (!user) {
-      navigate('/login');
-      return;
-    }
     if (!bookForm.pickupLocation) {
       setBookError('Please enter pickup location.');
+      return;
+    }
+    if (!documentForm.fullName.trim() || !documentForm.documentNumber.trim() || !documentForm.documentType || !documentForm.country.trim() || !documentForm.governmentId) {
+      setBookError('Please complete the government ID upload and verification details.');
+      return;
+    }
+    const documentValidation = validateDocumentNumber(documentForm.documentType, documentForm.documentNumber);
+    if (documentValidation.isValid === false) {
+      setBookError(documentValidation.message);
       return;
     }
     setBookError('');
@@ -64,28 +81,50 @@ export default function CarDetail() {
     const days = getTotalDays();
     let error: unknown = null;
     try {
-      await bookingApi.create({
-      user_id: user.id,
-      car_id: car!.id,
-      pickup_location: bookForm.pickupLocation,
-      drop_location: bookForm.dropLocation || bookForm.pickupLocation,
-      pickup_date: bookForm.pickupDate,
-      drop_date: bookForm.dropDate,
-      pickup_time: bookForm.pickupTime,
-      drop_time: bookForm.dropTime,
-      total_days: days,
-      total_amount: days * car!.price_per_day,
-      security_deposit: car!.security_deposit,
-      notes: bookForm.notes,
-      booking_status: 'pending',
-      payment_status: 'pending',
+      const fd = new FormData();
+      fd.append('file', documentForm.governmentId as Blob);
+      fd.append('type', documentForm.documentType);
+      fd.append('documentType', documentForm.documentType);
+      fd.append('fullName', documentForm.fullName);
+      fd.append('documentNumber', sanitizeDocumentNumber(documentForm.documentType, documentForm.documentNumber));
+      fd.append('country', documentForm.country);
+
+      const doc = await documentApi.upload(fd);
+      if (!doc || (doc.status !== 'verified' && doc.verificationStatus !== 'verified')) {
+        throw new Error(doc?.verificationMessage || 'Identity verification failed.');
+      }
+
+      const booking = await bookingApi.createGuest({
+        car_id: car!.id,
+        pickup_location: bookForm.pickupLocation,
+        drop_location: bookForm.dropLocation || bookForm.pickupLocation,
+        pickup_date: bookForm.pickupDate,
+        drop_date: bookForm.dropDate,
+        pickup_time: bookForm.pickupTime,
+        drop_time: bookForm.dropTime,
+        total_days: days,
+        total_amount: days * car!.price_per_day,
+        security_deposit: car!.security_deposit,
+        notes: bookForm.notes,
+        booking_status: 'pending',
+        payment_status: 'pending',
+        document: doc._id || doc.id,
+        customer: {
+          name: documentForm.fullName,
+          email: user?.email || '',
+          phone: '',
+          address: bookForm.pickupLocation,
+          documentNumber: documentForm.documentNumber,
+          country: documentForm.country,
+        },
       });
+      setCreatedBooking(booking);
     } catch (err) {
       error = err;
     }
     setBookLoading(false);
     if (error) {
-      setBookError('Booking failed. Please try again.');
+      setBookError(error instanceof Error ? error.message : 'Booking failed. Please try again.');
     } else {
       setBookSuccess(true);
     }
@@ -132,15 +171,15 @@ export default function CarDetail() {
               <motion.div
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
-                className="relative rounded-2xl overflow-hidden mb-6 border border-brown/20"
-                style={{ height: '360px' }}
+                className="relative"
               >
-                <img
-                  src={car.images[0] || 'https://images.pexels.com/photos/170811/pexels-photo-170811.jpeg?auto=compress&cs=tinysrgb&w=800'}
+                <VehicleImage
+                  vehicle={car}
                   alt={car.name}
-                  className="w-full h-full object-cover"
+                  wrapperClassName="rounded-2xl overflow-hidden mb-6 border border-brown/20"
+                  wrapperStyle={{ height: '360px' }}
+                  imgClassName="w-full h-full object-contain"
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-earth/60 via-transparent to-transparent" />
                 <div className="absolute top-4 left-4">
                   <span className="font-montserrat text-xs font-semibold px-3 py-1.5 bg-brown text-cream rounded-full">{car.category}</span>
                 </div>
@@ -249,8 +288,16 @@ export default function CarDetail() {
                       <CheckCircle className="w-10 h-10 text-green-600" />
                     </div>
                     <h3 className="font-playfair text-xl font-bold text-earth mb-2">Booking Requested!</h3>
-                    <p className="text-stone font-poppins text-sm mb-6">
+                    <p className="text-stone font-poppins text-sm mb-2">
                       Your booking request is pending approval. We'll contact you within 30 minutes.
+                    </p>
+                    {createdBooking?.bookingId && (
+                      <p className="text-stone font-poppins text-sm mb-2">
+                        Booking ID: <span className="font-semibold text-earth">{createdBooking.bookingId}</span>
+                      </p>
+                    )}
+                    <p className="text-stone font-poppins text-sm mb-6">
+                      Status: <span className="font-semibold text-earth">Pending</span>
                     </p>
                     <Link to="/dashboard" className="btn-gold justify-center w-full" style={{ borderRadius: '8px' }}>
                       View My Bookings
@@ -287,6 +334,96 @@ export default function CarDetail() {
                       </div>
                     </div>
 
+                    <div className="space-y-4 mb-6 border-t border-brown/10 pt-6">
+                      <div>
+                        <label className="block text-xs font-montserrat font-semibold text-brown uppercase tracking-wider mb-2">
+                          <FileText className="w-3 h-3 inline mr-1" />Upload Government ID
+                        </label>
+                        <div className="grid gap-4 md:grid-cols-2">
+                          <input
+                            type="text"
+                            value={documentForm.fullName}
+                            onChange={e => setDocumentForm(prev => ({ ...prev, fullName: e.target.value }))}
+                            placeholder="Full name as on document"
+                            className="input-luxury"
+                          />
+                          <input
+                            type="text"
+                            value={documentForm.documentNumber}
+                            onChange={e => {
+                              const formatted = formatDocumentNumberInput(documentForm.documentType, e.target.value);
+                              setDocumentForm(prev => ({ ...prev, documentNumber: formatted }));
+                              const validation = validateDocumentNumber(documentForm.documentType, formatted);
+                              setDocumentValidation({ message: validation.message, isValid: validation.isValid });
+                            }}
+                            placeholder={getDocumentPlaceholder(documentForm.documentType)}
+                            className="input-luxury"
+                          />
+                        </div>
+                        <div className="grid gap-4 md:grid-cols-2 mt-4">
+                          <select
+                            value={documentForm.documentType}
+                            onChange={e => {
+                              const nextType = e.target.value as IdentityDocumentType;
+                              setDocumentForm(prev => ({ ...prev, documentType: nextType, documentNumber: '' }));
+                              setDocumentValidation({ message: '', isValid: null });
+                            }}
+                            className="input-luxury"
+                          >
+                            <option value="">Select document type</option>
+                            <option value="driving_license">Driving License</option>
+                            <option value="aadhaar">Aadhaar Card</option>
+                            <option value="passport">Passport</option>
+                            <option value="pan">PAN Card</option>
+                          </select>
+                          <input
+                            type="text"
+                            value={documentForm.country}
+                            onChange={e => setDocumentForm(prev => ({ ...prev, country: e.target.value }))}
+                            placeholder="Country"
+                            className="input-luxury"
+                          />
+                        </div>
+                        {documentForm.documentType ? (
+                          <p className="text-[11px] text-stone mt-2">{getDocumentHelperText(documentForm.documentType)}</p>
+                        ) : null}
+                        {documentValidation.message ? (
+                          <p className={`text-xs mt-2 ${documentValidation.isValid ? 'text-green-600' : documentValidation.isValid === false ? 'text-amber-600' : 'text-stone'}`}>{documentValidation.message}</p>
+                        ) : null}
+                        {getCountrySupportText(documentForm.country) ? (
+                          <div className="mt-3 rounded-xl border border-[#B67C52]/10 bg-[#FFF8EE] px-3 py-2 text-[11px] text-stone">
+                            <p className="font-semibold text-[#7B4A1E] mb-1">{getCountrySupportText(documentForm.country)?.[0]}</p>
+                            {getCountrySupportText(documentForm.country)?.slice(1).map(item => <p key={item}>{item}</p>)}
+                          </div>
+                        ) : null}
+                        <label className="flex items-center gap-3 rounded-2xl border border-[#B67C52]/20 bg-white px-4 py-3 cursor-pointer text-sm text-[#7B4A1E] shadow-sm transition hover:border-[#B67C52] mt-4">
+                          <FileText className="w-5 h-5" />
+                          <span>{documentForm.governmentId?.name || 'Upload document (JPG/PNG/PDF, max 10MB)'}</span>
+                          <input
+                            type="file"
+                            accept="image/*,.pdf"
+                            className="hidden"
+                            onChange={e => {
+                              const file = e.target.files?.[0] ?? null;
+                              if (file && file.size > 10 * 1024 * 1024) {
+                                setBookError('File too large (max 10MB).');
+                                return;
+                              }
+                              setDocumentForm(prev => ({ ...prev, governmentId: file }));
+                            }}
+                          />
+                        </label>
+                        <div className="mt-3 rounded-2xl border border-[#B67C52]/10 bg-[#FFF8EE] px-4 py-3 text-[11px] text-stone">
+                          <p className="font-semibold text-[#7B4A1E] mb-1">Accepted Formats:</p>
+                          <p>JPG, JPEG, PNG, PDF</p>
+                          <p className="font-semibold text-[#7B4A1E] mt-2 mb-1">Maximum Size:</p>
+                          <p>10 MB</p>
+                          <p className="font-semibold text-[#7B4A1E] mt-2 mb-1">Upload Guidance:</p>
+                          <p>Make sure the entire document is visible, with no blur, no flash reflection, all four corners visible, and upload the original document.</p>
+                        </div>
+                      </div>
+                    </div>
+
                     {/* Price Summary */}
                     <div className="bg-cream-dark rounded-xl p-4 mb-6 border border-brown/10">
                       <div className="flex justify-between mb-2">
@@ -317,7 +454,7 @@ export default function CarDetail() {
                     >
                       {bookLoading ? (
                         <span className="flex items-center gap-2"><div className="w-4 h-4 border-2 border-cream/40 border-t-cream rounded-full animate-spin" />Processing...</span>
-                      ) : !car.availability ? 'Not Available' : user ? 'Request Booking' : 'Login to Book'}
+                      ) : !car.availability ? 'Not Available' : 'Verify & Book'}
                     </motion.button>
 
                     <div className="flex gap-2">

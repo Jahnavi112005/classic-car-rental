@@ -4,6 +4,7 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { Fuel, Settings, Users, Star, Search, SlidersHorizontal, X } from 'lucide-react';
 import { Car } from '../types';
 import { fleetCars } from '../data/fleet';
+import VehicleImage from '../components/VehicleImage';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import WhatsAppFloat from '../components/WhatsAppFloat';
@@ -203,26 +204,20 @@ export default function FleetPage() {
 }
 
 function FleetCarCard({ car, index }: { car: Car; index: number }) {
-  const [hovered, setHovered] = useState(false);
-
   return (
     <motion.div
       initial={{ opacity: 0, y: 30 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4, delay: index * 0.05 }}
-      onHoverStart={() => setHovered(true)}
-      onHoverEnd={() => setHovered(false)}
       className="luxury-card overflow-hidden group"
     >
       <div className="relative h-48 overflow-hidden">
-        <motion.img
-          src={car.images[0] || 'https://images.pexels.com/photos/170811/pexels-photo-170811.jpeg?auto=compress&cs=tinysrgb&w=600'}
+        <VehicleImage
+          vehicle={car}
           alt={car.name}
-          className="w-full h-full object-cover"
-          animate={{ scale: hovered ? 1.08 : 1 }}
-          transition={{ duration: 0.6 }}
+          wrapperClassName="w-full h-full"
+          imgClassName="w-full h-full object-contain"
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-earth/80 via-transparent to-transparent" />
         <div className="absolute top-3 left-3 space-y-2">
           <span className="font-montserrat text-xs font-semibold px-3 py-1 bg-brown text-cream rounded-full">{car.category}</span>
           {car.featured && (

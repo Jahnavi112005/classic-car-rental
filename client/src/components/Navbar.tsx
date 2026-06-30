@@ -144,7 +144,7 @@ export default function Navbar() {
             <motion.button
               whileHover={{ y: -2, scale: 1.01 }}
               whileTap={{ scale: 0.98 }}
-              onClick={() => window.dispatchEvent(new CustomEvent('openBookingForm'))}
+              onClick={() => navigate('/fleet')}
               className="inline-flex items-center justify-center font-montserrat font-semibold text-sm text-white transition-all"
               style={{
                 background: '#B67C52',
@@ -268,7 +268,7 @@ export default function Navbar() {
               ) : (
                 <>
                   <button
-                    onClick={() => { navigate('/booking'); setMenuOpen(false); }}
+                    onClick={() => { navigate('/fleet'); setMenuOpen(false); }}
                     className="w-full bg-[#B67C52] text-white py-3 rounded-xl text-sm font-semibold transition-all duration-300 hover:bg-[#9d6a44]"
                   >
                     Book Now

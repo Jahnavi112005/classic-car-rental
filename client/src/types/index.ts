@@ -40,6 +40,7 @@ export type Car = {
   security_deposit: number;
   rating: number;
   reviews_count: number;
+  image?: string;
   created_at: string;
 };
 

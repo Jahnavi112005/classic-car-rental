@@ -8,6 +8,7 @@ import {
 import { bookingApi, inquiryApi, vehicleApi } from '../services/api';
 import AdminBookings from './AdminBookings';
 import { Booking, Car as CarType, Inquiry } from '../types';
+import VehicleImage from '../components/VehicleImage';
 import { useAuth } from '../context/AuthContext';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
@@ -226,9 +227,13 @@ export default function AdminPanel() {
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
                 {cars.map(car => (
                   <div key={car.id} className="luxury-card overflow-hidden">
-                    <div className="relative h-40">
-                      <img src={car.images[0] || 'https://images.pexels.com/photos/170811/pexels-photo-170811.jpeg?auto=compress&cs=tinysrgb&w=400'} alt={car.name} className="w-full h-full object-cover" />
-                      <div className="absolute inset-0 bg-gradient-to-t from-earth/70 via-transparent to-transparent" />
+                    <div className="relative">
+                      <VehicleImage
+                        vehicle={car}
+                        alt={car.name}
+                        wrapperClassName="h-40 overflow-hidden rounded-2xl border border-brown/20"
+                        imgClassName="w-full h-full object-contain"
+                      />
                       <div className="absolute top-3 left-3">
                         <span className="font-montserrat text-xs font-semibold px-2 py-1 bg-brown text-cream rounded-full">{car.category}</span>
                       </div>

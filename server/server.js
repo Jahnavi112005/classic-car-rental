@@ -8,9 +8,11 @@ import bookingRoutes from './routes/bookingRoutes.js';
 import inquiryRoutes from './routes/inquiryRoutes.js';
 import placeholderRoutes from './routes/placeholderRoutes.js';
 import documentRoutes from './routes/documentRoutes.js';
+import debugRoutes from './routes/debugRoutes.js';
 import reviewRoutes from './routes/reviewRoutes.js';
 import userRoutes from './routes/userRoutes.js';
 import vehicleRoutes from './routes/vehicleRoutes.js';
+import { resolveExecutable } from './services/identityVerificationService.js';
 
 await connectDB();
 
@@ -33,9 +35,20 @@ app.use('/api/reviews', reviewRoutes);
 app.use('/api/customers', placeholderRoutes);
 app.use('/api/payments', placeholderRoutes);
 app.use('/api/documents', documentRoutes);
+app.use('/api/debug', debugRoutes);
 app.use('/api/notifications', placeholderRoutes);
 app.use('/api/branches', placeholderRoutes);
 app.use('/api/admins', placeholderRoutes);
+
+try {
+  const resolvedTesseract = resolveExecutable('tesseract', 'TESSERACT_PATH');
+  const resolvedPoppler = resolveExecutable('pdftoppm', 'PDFTOPPM_PATH');
+  console.log('Resolved Tesseract:', resolvedTesseract);
+  console.log('Resolved Poppler:', resolvedPoppler);
+} catch (error) {
+  console.error('Executable resolution failed:', error.message);
+  process.exit(1);
+}
 
 app.use(notFound);
 app.use(errorHandler);

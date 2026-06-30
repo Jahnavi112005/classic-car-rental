@@ -1,6 +1,7 @@
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { Star, ArrowRight, Zap } from 'lucide-react';
+import VehicleImage from '../components/VehicleImage';
 import { whatsAppUrl } from '../utils/whatsapp';
 
 const featured = [
@@ -105,16 +106,12 @@ export default function FeaturedVehicles() {
 
               {/* Image */}
               <div className="relative h-52 overflow-hidden">
-                <motion.img
-                  src={car.image}
+                <VehicleImage
+                  vehicle={car}
                   alt={car.name}
-                  className="w-full h-full object-cover"
-                  whileHover={{ scale: 1.08 }}
-                  transition={{ duration: 0.6 }}
+                  wrapperClassName="w-full h-full"
+                  imgClassName="w-full h-full object-contain"
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-earth/90 via-earth/20 to-transparent" />
-
-                {/* Category */}
                 <div className="absolute bottom-3 left-4">
                   <span className="text-xs font-montserrat font-semibold text-brown-light/80 uppercase tracking-wider">
                     {car.category}

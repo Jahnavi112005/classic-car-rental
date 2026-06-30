@@ -9,6 +9,7 @@ import { profileFor } from '../services/tokenService.js';
 import Customer from '../models/Customer.js';
 import notificationService from '../services/notificationService.js';
 import AuditLog from '../models/AuditLog.js';
+import { parseIdentityFields, verifyIdentity } from '../services/identityVerificationService.js';
 
 function normalizeBooking(booking) {
   const obj = toClient(booking);
@@ -242,6 +243,31 @@ export const getAuditLogs = asyncHandler(async (req, res) => {
 export const createBooking = asyncHandler(async (req, res) => {
   const carId = await resolveVehicleId(req.body.car_id);
 
+  if (req.body.document) {
+    const document = await Document.findById(req.body.document);
+    if (!document) {
+      res.status(400);
+      throw new Error('Document not found.');
+    }
+
+    const parsedFields = parseIdentityFields(document.type, document.ocr?.raw || '');
+    const verification = verifyIdentity(
+      {
+        documentType: document.type,
+        fullName: req.body.customer?.name || req.body.fullName || '',
+        documentNumber: req.body.customer?.documentNumber || req.body.documentNumber || '',
+        country: req.body.customer?.country || req.body.country || '',
+      },
+      parsedFields,
+      document.ocr?.raw || ''
+    );
+
+    if (!verification.passed) {
+      res.status(400);
+      throw new Error(verification.message);
+    }
+  }
+
   // availability check: overlapping bookings for same car
   const pickup = new Date(req.body.pickup_date);
   const drop = new Date(req.body.drop_date);
@@ -269,6 +295,7 @@ export const createBooking = asyncHandler(async (req, res) => {
     user_id: req.user?._id,
     car_id: carId,
     bookingId,
+    verification_status: req.body.document ? 'verified' : 'pending',
     notes: req.body.notes ? [{ text: req.body.notes, createdAt: new Date() }] : [],
   };
 
@@ -277,7 +304,7 @@ export const createBooking = asyncHandler(async (req, res) => {
   // link document if provided
   if (req.body.document) {
     try {
-      await Document.findByIdAndUpdate(req.body.document, { booking: booking._id });
+      await Document.findByIdAndUpdate(req.body.document, { booking: booking._id, bookingReference: booking._id });
       booking.documents = [req.body.document];
       await booking.save();
     } catch (err) {
@@ -331,7 +358,7 @@ export const createGuestBooking = asyncHandler(async (req, res) => {
     customer_id: customer._id,
     car_id: carId,
     bookingId,
-    verification_status: 'pending',
+    verification_status: req.body.document ? 'verified' : 'pending',
     booking_status: 'pending',
     notes: req.body.notes ? [{ text: req.body.notes, createdAt: new Date() }] : [],
   };
@@ -340,7 +367,7 @@ export const createGuestBooking = asyncHandler(async (req, res) => {
 
   if (req.body.document) {
     try {
-      await Document.findByIdAndUpdate(req.body.document, { booking: booking._id, user: customer._id });
+      await Document.findByIdAndUpdate(req.body.document, { booking: booking._id, bookingReference: booking._id, user: customer._id });
       booking.documents = [req.body.document];
       await booking.save();
     } catch (err) {

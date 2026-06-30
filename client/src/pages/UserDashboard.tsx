@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { bookingApi, profileApi } from '../services/api';
 import { Booking } from '../types';
+import VehicleImage from '../components/VehicleImage';
 import { useAuth } from '../context/AuthContext';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
@@ -155,8 +156,13 @@ export default function UserDashboard() {
                     return (
                       <motion.div key={booking.id} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }} className="luxury-card p-6">
                         <div className="flex flex-col md:flex-row gap-6">
-                          {car?.images?.[0] && (
-                            <img src={car.images[0]} alt={car.name} className="w-full md:w-40 h-28 object-cover rounded-xl border border-brown/20 flex-shrink-0" />
+                          {car && (
+                            <VehicleImage
+                              vehicle={car}
+                              alt={car.name}
+                              wrapperClassName="w-full md:w-40 h-28 rounded-xl border border-brown/20 flex-shrink-0 overflow-hidden"
+                              imgClassName="w-full h-full object-contain"
+                            />
                           )}
                           <div className="flex-1">
                             <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 mb-4">

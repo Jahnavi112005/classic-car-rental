@@ -136,6 +136,87 @@
     transform: translateY(-4px);
   }
 
+  .vehicle-image-panel {
+    position: relative;
+    background: radial-gradient(circle at 50% 14%, rgba(255, 250, 243, 1) 0%, rgba(251, 241, 227, 0.9) 30%, rgba(238, 221, 193, 0.98) 58%, rgba(222, 196, 159, 1) 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+  }
+
+  .vehicle-image-panel::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(circle at 50% 18%, rgba(255, 255, 255, 0.48) 0%, rgba(255, 248, 238, 0) 30%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .vehicle-image-panel::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    box-shadow: inset 0 0 90px rgba(0, 0, 0, 0.08), inset 0 18px 40px rgba(0, 0, 0, 0.06);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .vehicle-image-panel img,
+  .vehicle-image-panel__image {
+    position: relative;
+    z-index: 1;
+    width: auto;
+    height: auto;
+    max-width: 95%;
+    max-height: 95%;
+    object-fit: contain;
+    object-position: center;
+    transition: transform 0.3s ease, filter 0.3s ease;
+  }
+
+  .vehicle-image-panel img {
+    filter: drop-shadow(0 20px 32px rgba(0, 0, 0, 0.16));
+  }
+
+  .vehicle-image-panel__spotlight {
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(circle at 50% 12%, rgba(255, 255, 255, 0.62), rgba(255, 255, 255, 0) 32%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .vehicle-image-panel__floor-shadow {
+    position: absolute;
+    left: 50%;
+    bottom: 8px;
+    width: 72%;
+    height: 18%;
+    transform: translateX(-50%);
+    background: radial-gradient(circle, rgba(29, 22, 17, 0.14) 0%, rgba(29, 22, 17, 0) 70%);
+    filter: blur(14px);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .vehicle-image-panel__image {
+    transform: translateZ(0);
+  }
+
+  .vehicle-image-panel:hover .vehicle-image-panel__image {
+    transform: scale(1.01);
+  }
+
+  .vehicle-image-panel[data-white-bg="true"] {
+    background: radial-gradient(circle at 50% 14%, rgba(255, 250, 243, 1) 0%, rgba(248, 238, 221, 0.95) 30%, rgba(236, 219, 188, 0.98) 58%, rgba(220, 193, 157, 1) 100%);
+  }
+
+  .vehicle-image-panel[data-needs-replacement="true"]::after {
+    box-shadow: inset 0 0 90px rgba(0, 0, 0, 0.08), inset 0 18px 40px rgba(0, 0, 0, 0.06);
+  }
+
   .input-luxury {
     width: 100%;
     background: #FFFFFF;

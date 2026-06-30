@@ -1,9 +1,12 @@
 import multer from 'multer';
-import path from 'path';
 import fs from 'fs';
 import Document from '../models/Document.js';
-import { extract } from '../services/ocrService.js';
+import { extract, parseIdentityFields, verifyIdentity } from '../services/identityVerificationService.js';
 import { cloudinaryConfig } from '../config/cloudinary.js';
+
+function logStage(stage, details) {
+  console.log(`[OCR][${stage}]`, JSON.stringify(details));
+}
 
 const upload = multer({
   dest: 'uploads/',
@@ -37,7 +40,6 @@ export const uploadDocument = async (req, res) => {
   const localPath = req.file.path;
   let fileUrl = `/uploads/${req.file.filename}`;
 
-  // If cloudinary configured, try to upload there
   if (process.env.CLOUDINARY_API_KEY && process.env.CLOUDINARY_API_SECRET && process.env.CLOUDINARY_CLOUD_NAME) {
     try {
       const cloudinary = await import('cloudinary').then(m => m.v2 || m);
@@ -48,22 +50,58 @@ export const uploadDocument = async (req, res) => {
       });
       const uploaded = await cloudinary.uploader.upload(localPath, { resource_type: 'auto', folder: 'documents' });
       fileUrl = uploaded.secure_url;
-      // remove local file
-      fs.unlink(localPath, () => {});
     } catch (err) {
       console.warn('Cloudinary upload failed, keeping local copy', err.message || err);
     }
   }
 
-  // Run OCR
-  const ocrResult = await extract(fileUrl).catch(err => ({ error: err.message }));
+  logStage('Upload', { filename: req.file.originalname, mimetype: req.file.mimetype, size: req.file.size, localPath });
+  const ocrResult = await extract(localPath, req.file.mimetype).catch(err => ({ error: err.message }));
+  const rawText = ocrResult?.raw || '';
+  const parsedFields = parseIdentityFields(req.body.documentType || req.body.type || 'other', rawText);
+  logStage('Text Parsing', { documentType: req.body.documentType || req.body.type || 'other', parsedFields });
+  const verification = verifyIdentity(
+    {
+      documentType: req.body.documentType || req.body.type || 'other',
+      fullName: req.body.fullName || '',
+      documentNumber: req.body.documentNumber || '',
+      country: req.body.country || '',
+    },
+    parsedFields,
+    rawText,
+    { failureReason: ocrResult?.failureReason || null }
+  );
 
+  logStage('Booking Creation', { documentType: req.body.documentType || req.body.type || 'other', verificationStatus: verification.passed ? 'verified' : verification.status === 'restricted' ? 'restricted' : 'rejected' });
   const doc = await Document.create({
     user: req.user?._id,
-    type: req.body.type || 'other',
+    type: req.body.type || req.body.documentType || 'other',
     fileUrl,
-    ocr: ocrResult,
+    originalImageUrl: fileUrl,
+    ocrText: ocrResult.raw || '',
+    parsedFields,
+    verificationStatus: verification.passed ? 'verified' : verification.status === 'restricted' ? 'restricted' : 'rejected',
+    verificationNotes: verification.notes,
+    verificationMessage: verification.message,
+    verifiedAt: verification.passed ? new Date() : null,
+    status: verification.passed ? 'verified' : 'rejected',
+    ocr: {
+      ...ocrResult,
+      parsedFields,
+      verification,
+      uploadedAt: new Date().toISOString(),
+    },
   });
 
-  res.status(201).json(doc);
+  logStage('Booking Creation', { createdDocumentId: doc._id, status: doc.status, verificationStatus: doc.verificationStatus });
+  res.status(201).json({
+    _id: doc._id,
+    id: doc._id,
+    fileUrl: doc.fileUrl,
+    status: doc.status,
+    verificationStatus: verification.passed ? 'verified' : 'rejected',
+    verificationMessage: verification.message,
+    verificationNotes: verification.notes,
+    ocr: doc.ocr,
+  });
 };
