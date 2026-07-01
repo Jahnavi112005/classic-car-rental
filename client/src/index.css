@@ -1,0 +1,290 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
+
+  html {
+    scroll-behavior: smooth;
+    overflow-x: hidden;
+    max-width: 100%;
+  }
+
+  body {
+    font-family: 'Poppins', sans-serif;
+    background-color: #F8F3EA;
+    color: #2A1A0A;
+    overflow-x: hidden;
+    max-width: 100vw;
+  }
+
+  img {
+    max-width: 100%;
+    height: auto;
+    object-fit: contain;
+    display: block;
+  }
+
+  ::-webkit-scrollbar {
+    width: 8px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: #F0EBE0;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: #7B4A1E;
+    border-radius: 4px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: #5C3715;
+  }
+}
+
+@layer components {
+  .btn-gold {
+    background: linear-gradient(135deg, #7B4A1E, #5C3715);
+    color: #F8F3EA;
+    font-family: 'Montserrat', sans-serif;
+    font-weight: 600;
+    padding: 12px 28px;
+    border-radius: 4px;
+    transition: all 0.3s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    font-size: 13px;
+  }
+
+  .btn-gold:hover {
+    box-shadow: 0 8px 30px rgba(123,74,30,0.3);
+    transform: translateY(-2px);
+  }
+
+  .btn-outline-gold {
+    border: 2px solid #7B4A1E;
+    color: #7B4A1E;
+    font-family: 'Montserrat', sans-serif;
+    font-weight: 600;
+    padding: 12px 28px;
+    border-radius: 4px;
+    transition: all 0.3s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    font-size: 13px;
+    background: transparent;
+  }
+
+  .btn-outline-gold:hover {
+    background: #7B4A1E;
+    color: #F8F3EA;
+  }
+
+  .btn-cream {
+    background: #F8F3EA;
+    color: #7B4A1E;
+    font-family: 'Montserrat', sans-serif;
+    font-weight: 600;
+    padding: 12px 28px;
+    border-radius: 4px;
+    transition: all 0.3s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    font-size: 13px;
+    border: 2px solid transparent;
+  }
+
+  .btn-cream:hover {
+    background: #F0EBE0;
+    box-shadow: 0 8px 30px rgba(42,26,10,0.1);
+    transform: translateY(-2px);
+  }
+
+  .glass-card {
+    background: rgba(255,255,255,0.7);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(123,74,30,0.1);
+    border-radius: 12px;
+  }
+
+  .luxury-card {
+    background: #FFFFFF;
+    border: 1px solid rgba(123,74,30,0.15);
+    border-radius: 12px;
+    transition: all 0.5s ease;
+    box-shadow: 0 4px 20px rgba(42,26,10,0.08);
+  }
+
+  .luxury-card:hover {
+    border-color: rgba(123,74,30,0.4);
+    box-shadow: 0 8px 40px rgba(123,74,30,0.15);
+    transform: translateY(-4px);
+  }
+
+  .vehicle-image-panel {
+    position: relative;
+    background: radial-gradient(circle at 50% 14%, rgba(255, 250, 243, 1) 0%, rgba(251, 241, 227, 0.9) 30%, rgba(238, 221, 193, 0.98) 58%, rgba(222, 196, 159, 1) 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+  }
+
+  .vehicle-image-panel::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(circle at 50% 18%, rgba(255, 255, 255, 0.48) 0%, rgba(255, 248, 238, 0) 30%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .vehicle-image-panel::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    box-shadow: inset 0 0 90px rgba(0, 0, 0, 0.08), inset 0 18px 40px rgba(0, 0, 0, 0.06);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .vehicle-image-panel img,
+  .vehicle-image-panel__image {
+    position: relative;
+    z-index: 1;
+    width: auto;
+    height: auto;
+    max-width: 95%;
+    max-height: 95%;
+    object-fit: contain;
+    object-position: center;
+    transition: transform 0.3s ease, filter 0.3s ease;
+  }
+
+  .vehicle-image-panel img {
+    filter: drop-shadow(0 20px 32px rgba(0, 0, 0, 0.16));
+  }
+
+  .vehicle-image-panel__spotlight {
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(circle at 50% 12%, rgba(255, 255, 255, 0.62), rgba(255, 255, 255, 0) 32%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .vehicle-image-panel__floor-shadow {
+    position: absolute;
+    left: 50%;
+    bottom: 8px;
+    width: 72%;
+    height: 18%;
+    transform: translateX(-50%);
+    background: radial-gradient(circle, rgba(29, 22, 17, 0.14) 0%, rgba(29, 22, 17, 0) 70%);
+    filter: blur(14px);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .vehicle-image-panel__image {
+    transform: translateZ(0);
+  }
+
+  .vehicle-image-panel:hover .vehicle-image-panel__image {
+    transform: scale(1.01);
+  }
+
+  .vehicle-image-panel[data-white-bg="true"] {
+    background: radial-gradient(circle at 50% 14%, rgba(255, 250, 243, 1) 0%, rgba(248, 238, 221, 0.95) 30%, rgba(236, 219, 188, 0.98) 58%, rgba(220, 193, 157, 1) 100%);
+  }
+
+  .vehicle-image-panel[data-needs-replacement="true"]::after {
+    box-shadow: inset 0 0 90px rgba(0, 0, 0, 0.08), inset 0 18px 40px rgba(0, 0, 0, 0.06);
+  }
+
+  .input-luxury {
+    width: 100%;
+    background: #FFFFFF;
+    border: 1px solid rgba(123,74,30,0.2);
+    border-radius: 8px;
+    padding: 12px 16px;
+    color: #2A1A0A;
+    font-family: 'Poppins', sans-serif;
+    transition: all 0.3s ease;
+    outline: none;
+  }
+
+  .input-luxury::placeholder {
+    color: #6B5B4F;
+  }
+
+  .input-luxury:focus {
+    border-color: #7B4A1E;
+    box-shadow: 0 0 0 3px rgba(123,74,30,0.1);
+  }
+
+  .section-padding {
+    padding: 80px 24px;
+  }
+
+  .section-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: #2A1A0A;
+    text-align: center;
+  }
+
+  .section-subtitle {
+    font-family: 'Poppins', sans-serif;
+    font-size: 1rem;
+    color: #6B5B4F;
+    text-align: center;
+    max-width: 600px;
+    margin: 0 auto;
+  }
+}
+
+@layer utilities {
+  .text-gradient-brown {
+    background: linear-gradient(135deg, #7B4A1E, #9A6B3E, #5C3715);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .bg-hero {
+    background: linear-gradient(180deg, #F8F3EA 0%, #F0EBE0 50%, #E8E3D8 100%);
+  }
+
+  .bg-section {
+    background: #FFFFFF;
+  }
+
+  .font-playfair {
+    font-family: 'Playfair Display', serif;
+  }
+
+  .font-poppins {
+    font-family: 'Poppins', sans-serif;
+  }
+
+  .font-montserrat {
+    font-family: 'Montserrat', sans-serif;
+  }
+}
