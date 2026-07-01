@@ -18,6 +18,13 @@ export async function protect(req, res, next) {
       res.status(401);
       return next(new Error('Not authorized'));
     }
+    // Ensure the user's role is one of the allowed internal roles
+    const validRoles = ['owner', 'booking_staff'];
+    if (!validRoles.includes(user.role)) {
+      res.status(403);
+      return next(new Error('Access denied'));
+    }
+
     req.user = user;
     next();
   } catch {
@@ -26,8 +33,20 @@ export async function protect(req, res, next) {
   }
 }
 
+export function authorizeRoles(...allowedRoles) {
+  return (req, res, next) => {
+    if (!req.user) {
+      res.status(401);
+      return next(new Error('Not authorized'));
+    }
+
+    if (allowedRoles.includes(req.user.role)) return next();
+
+    res.status(403);
+    next(new Error('Access denied'));
+  };
+}
+
 export function adminOnly(req, res, next) {
-  if (req.user?.role === 'admin') return next();
-  res.status(403);
-  next(new Error('Admin access required'));
+  return authorizeRoles('owner', 'booking_staff')(req, res, next);
 }

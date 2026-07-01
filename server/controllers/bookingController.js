@@ -74,7 +74,7 @@ export const listBookings = asyncHandler(async (req, res) => {
   if (req.query.vehicle) filter.car_id = req.query.vehicle;
 
   // non-admins only see own bookings
-  if (!req.user || req.user.role !== 'admin') filter.user_id = req.user?._id;
+  if (!req.user || !['owner', 'booking_staff'].includes(req.user.role)) filter.user_id = req.user?._id;
 
   let bookings = await Booking.find(filter)
     .populate('car_id')
@@ -104,7 +104,7 @@ export const addAdminNote = asyncHandler(async (req, res) => {
     res.status(404);
     throw new Error('Booking not found');
   }
-  if (req.user.role !== 'admin') {
+  if (!['owner', 'booking_staff'].includes(req.user.role)) {
     res.status(403);
     throw new Error('Not allowed');
   }
@@ -120,7 +120,7 @@ export const addAdminNote = asyncHandler(async (req, res) => {
 });
 
 export const assignVehicle = asyncHandler(async (req, res) => {
-  if (req.user.role !== 'admin') {
+  if (!['owner', 'booking_staff'].includes(req.user.role)) {
     res.status(403);
     throw new Error('Not allowed');
   }
@@ -167,7 +167,7 @@ export const getBookingById = asyncHandler(async (req, res) => {
 });
 
 export const changeBookingStatus = asyncHandler(async (req, res) => {
-  if (req.user.role !== 'admin') {
+  if (!['owner', 'booking_staff'].includes(req.user.role)) {
     res.status(403);
     throw new Error('Not allowed');
   }
@@ -186,19 +186,31 @@ export const changeBookingStatus = asyncHandler(async (req, res) => {
   booking.timeline.push({ event: `status_${status}`, ts: new Date(), by: req.user._id, meta: { note } });
   await booking.save();
   await AuditLog.create({ admin: req.user._id, booking: booking._id, action: 'change_status', detail: { from, to: status, note }, ip: req.ip });
-  // if approved -> send notification
-  if (status === 'approved') {
-    try {
-      const populated = await Booking.findById(booking._id).populate('user_id').populate('customer_id');
-      const to = populated.user_id?.email || populated.customer_id?.email;
-      if (to) notificationService.sendEmailNotification(to, 'Booking Status Updated', `Booking ${booking.bookingId} status changed to ${status}`);
-    } catch (err) {
-      console.warn('Notification failed', err.message || err);
-    }
+
+  if (status === 'approved' && booking.car_id) {
+    await Vehicle.findByIdAndUpdate(booking.car_id, { status: 'booked', availability: false });
   }
+
   if (status === 'completed' && booking.car_id) {
-    await Vehicle.findByIdAndUpdate(booking.car_id, { availability: true });
+    await Vehicle.findByIdAndUpdate(booking.car_id, { status: 'available', availability: true });
   }
+
+  if (status === 'rejected' && booking.car_id) {
+    await Vehicle.findByIdAndUpdate(booking.car_id, { status: 'available', availability: true });
+  }
+
+  if (status === 'cancelled' && booking.car_id) {
+    await Vehicle.findByIdAndUpdate(booking.car_id, { status: 'available', availability: true });
+  }
+
+  try {
+    const populated = await Booking.findById(booking._id).populate('user_id').populate('customer_id');
+    const to = populated.user_id?.email || populated.customer_id?.email;
+    if (to) notificationService.sendEmailNotification(to, 'Booking Status Updated', `Booking ${booking.bookingId} status changed to ${status}`);
+  } catch (err) {
+    console.warn('Notification failed', err.message || err);
+  }
+
   const populated = await Booking.findById(booking._id).populate('car_id').populate('user_id').populate('customer_id').populate('documents');
   res.json(normalizeBooking(populated));
 });
@@ -232,7 +244,7 @@ export const exportBookings = asyncHandler(async (req, res) => {
 });
 
 export const getAuditLogs = asyncHandler(async (req, res) => {
-  if (req.user.role !== 'admin') {
+  if (!['owner', 'booking_staff'].includes(req.user.role)) {
     res.status(403);
     throw new Error('Not allowed');
   }
@@ -386,7 +398,7 @@ export const updateBooking = asyncHandler(async (req, res) => {
     throw new Error('Booking not found');
   }
 
-  if (req.user.role !== 'admin' && String(booking.user_id) !== String(req.user._id)) {
+  if (!['owner', 'booking_staff'].includes(req.user.role) && String(booking.user_id) !== String(req.user._id)) {
     res.status(403);
     throw new Error('Not allowed to update this booking');
   }
@@ -408,11 +420,9 @@ export const actionBooking = asyncHandler(async (req, res) => {
 
   if (action === 'approve') {
     booking.booking_status = 'approved';
-    // mark vehicle unavailable
     if (booking.car_id) {
-      await Vehicle.findByIdAndUpdate(booking.car_id._id, { availability: false });
+      await Vehicle.findByIdAndUpdate(booking.car_id._id, { status: 'booked', availability: false });
     }
-    // send notification to customer/user if email exists
     try {
       const to = booking.user_id?.email || booking.customer_id?.email;
       if (to) {
@@ -427,17 +437,23 @@ export const actionBooking = asyncHandler(async (req, res) => {
     }
   } else if (action === 'reject') {
     booking.booking_status = 'rejected';
+    if (booking.car_id) {
+      await Vehicle.findByIdAndUpdate(booking.car_id._id, { status: 'available', availability: true });
+    }
   } else if (action === 'request_reupload') {
     booking.verification_status = 'partial';
   } else if (action === 'assign_vehicle' && vehicleId) {
     const vId = await resolveVehicleId(vehicleId);
     booking.car_id = vId;
     booking.booking_status = 'approved';
-    await Vehicle.findByIdAndUpdate(vId, { availability: false });
+    await Vehicle.findByIdAndUpdate(vId, { status: 'booked', availability: false });
   } else if (action === 'mark_vehicle_booked') {
-    if (booking.car_id) await Vehicle.findByIdAndUpdate(booking.car_id._id, { availability: false });
+    if (booking.car_id) await Vehicle.findByIdAndUpdate(booking.car_id._id, { status: 'booked', availability: false });
   } else if (action === 'mark_vehicle_available') {
-    if (booking.car_id) await Vehicle.findByIdAndUpdate(booking.car_id._id, { availability: true });
+    if (booking.car_id) await Vehicle.findByIdAndUpdate(booking.car_id._id, { status: 'available', availability: true });
+  } else if (action === 'completed') {
+    booking.booking_status = 'completed';
+    if (booking.car_id) await Vehicle.findByIdAndUpdate(booking.car_id._id, { status: 'available', availability: true });
   }
 
   if (note) {

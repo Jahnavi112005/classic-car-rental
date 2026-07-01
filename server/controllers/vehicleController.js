@@ -13,56 +13,111 @@ function normalizeSeedCar(car) {
   };
 }
 
+async function importSeedVehicleById(id) {
+  const fallback = fleetCars.find(car => String(car.id) === String(id) && !car.isDeleted);
+  if (!fallback) return null;
+
+  let vehicle = await Vehicle.findOne({ seedId: fallback.id, isDeleted: false });
+  if (vehicle) return vehicle;
+
+  const vehicleData = {
+    seedId: fallback.id,
+    name: fallback.name,
+    brand: fallback.brand,
+    model: fallback.model,
+    year: fallback.year,
+    yearRange: fallback.yearRange,
+    category: fallback.category,
+    seats: fallback.seats,
+    transmission: fallback.transmission,
+    fuel_type: fallback.fuel_type,
+    price_per_day: fallback.price_per_day,
+    images: fallback.images,
+    description: fallback.description,
+    features: fallback.features,
+    availability: fallback.availability,
+    security_deposit: fallback.security_deposit,
+    rating: fallback.rating,
+    reviews_count: fallback.reviews_count,
+    featured: fallback.featured || false,
+    status: 'available',
+    isDeleted: false,
+    createdAt: new Date(fallback.created_at),
+    updatedAt: new Date(fallback.created_at),
+  };
+
+  vehicle = await Vehicle.create(vehicleData);
+  return vehicle;
+}
+
 export const listVehicles = asyncHandler(async (_req, res) => {
-  const vehicles = await Vehicle.find().sort({ createdAt: -1 });
-  res.json(vehicles.length ? listToClient(vehicles) : fleetCars.map(normalizeSeedCar));
+  const vehicles = await Vehicle.find({ isDeleted: false }).sort({ createdAt: -1 });
+
+  const importedSeedIds = new Set(
+    vehicles
+      .filter(vehicle => vehicle.seedId != null)
+      .map(vehicle => String(vehicle.seedId))
+  );
+
+  const seedVehicles = fleetCars
+    .filter(car => !car.isDeleted && !importedSeedIds.has(String(car.id)))
+    .map(normalizeSeedCar)
+    .map(car => ({ ...car, status: 'available' }));
+
+  const combinedVehicles = [...listToClient(vehicles), ...seedVehicles];
+  res.json(combinedVehicles);
 });
 
 export const getVehicle = asyncHandler(async (req, res) => {
   let vehicle = null;
   if (mongoose.Types.ObjectId.isValid(req.params.id)) {
-    vehicle = await Vehicle.findById(req.params.id);
+    vehicle = await Vehicle.findOne({ _id: req.params.id, isDeleted: false });
   }
 
   if (vehicle) return res.json(toClient(vehicle));
 
-  const fallback = fleetCars.find(car => String(car.id) === String(req.params.id));
+  const fallback = fleetCars.find(car => String(car.id) === String(req.params.id) && !car.isDeleted);
   if (!fallback) {
     res.status(404);
     throw new Error('Vehicle not found');
   }
-  res.json(normalizeSeedCar(fallback));
+  res.json({ ...normalizeSeedCar(fallback), status: 'available' });
 });
 
 export const updateVehicle = asyncHandler(async (req, res) => {
-  if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
-    res.status(400);
-    throw new Error('Seed vehicles can be viewed but not modified until imported into MongoDB');
+  let vehicle = null;
+  if (mongoose.Types.ObjectId.isValid(req.params.id)) {
+    vehicle = await Vehicle.findById(req.params.id);
+  } else {
+    vehicle = await importSeedVehicleById(req.params.id);
   }
 
-  const vehicle = await Vehicle.findByIdAndUpdate(req.params.id, req.body, {
+  if (!vehicle) {
+    res.status(404);
+    throw new Error('Vehicle not found');
+  }
+
+  const updatedVehicle = await Vehicle.findByIdAndUpdate(vehicle._id, req.body, {
     new: true,
     runValidators: true,
   });
 
-  if (!vehicle) {
-    res.status(404);
-    throw new Error('Vehicle not found');
-  }
-
-  res.json(toClient(vehicle));
+  res.json(toClient(updatedVehicle));
 });
 
 export const deleteVehicle = asyncHandler(async (req, res) => {
-  if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
-    res.status(400);
-    throw new Error('Seed vehicles can be viewed but not deleted until imported into MongoDB');
+  let vehicle = null;
+  if (mongoose.Types.ObjectId.isValid(req.params.id)) {
+    vehicle = await Vehicle.findById(req.params.id);
+  } else {
+    vehicle = await importSeedVehicleById(req.params.id);
   }
 
-  const vehicle = await Vehicle.findByIdAndDelete(req.params.id);
   if (!vehicle) {
     res.status(404);
     throw new Error('Vehicle not found');
   }
+
+  await Vehicle.findByIdAndUpdate(vehicle._id, { isDeleted: true }, { new: true });
   res.status(204).end();
 });

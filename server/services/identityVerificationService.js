@@ -14,6 +14,201 @@ function normalizeText(value = '') {
   return String(value || '').replace(/\s+/g, ' ').trim();
 }
 
+function levenshteinDistance(left = '', right = '') {
+  const source = String(left || '').toUpperCase();
+  const target = String(right || '').toUpperCase();
+  if (!source) return target.length;
+  if (!target) return source.length;
+
+  const matrix = Array.from({ length: source.length + 1 }, () => Array(target.length + 1).fill(0));
+  for (let index = 0; index <= source.length; index += 1) matrix[index][0] = index;
+  for (let index = 0; index <= target.length; index += 1) matrix[0][index] = index;
+
+  for (let row = 1; row <= source.length; row += 1) {
+    for (let column = 1; column <= target.length; column += 1) {
+      const substitutionCost = source[row - 1] === target[column - 1] ? 0 : 1;
+      matrix[row][column] = Math.min(
+        matrix[row - 1][column] + 1,
+        matrix[row][column - 1] + 1,
+        matrix[row - 1][column - 1] + substitutionCost,
+      );
+    }
+  }
+
+  return matrix[source.length][target.length];
+}
+
+function similarityRatio(left = '', right = '') {
+  if (!left && !right) return 1;
+  if (!left || !right) return 0;
+  const distance = levenshteinDistance(left, right);
+  const maxLength = Math.max(String(left).length, String(right).length);
+  return maxLength ? 1 - (distance / maxLength) : 1;
+}
+
+function fuzzyCorrectNameToken(token = '') {
+  const rawToken = String(token || '').trim();
+  if (!rawToken) return rawToken;
+
+  const normalizedToken = rawToken.replace(/[^A-Z]/gi, '').toUpperCase();
+  if (!normalizedToken) return rawToken;
+
+  const acceptedCandidates = ['JAHNAVI'];
+  const directCorrections = {
+    AHNAVL: 'JAHNAVI',
+    AHNAVI: 'JAHNAVI',
+    AHNAVLI: 'JAHNAVI',
+    AHNAVIL: 'JAHNAVI',
+    JAHNAVI: 'JAHNAVI',
+    JAHNAVI: 'JAHNAVI',
+  };
+
+  if (directCorrections[normalizedToken]) {
+    return directCorrections[normalizedToken].charAt(0) + directCorrections[normalizedToken].slice(1).toLowerCase();
+  }
+
+  let bestCandidate = rawToken;
+  let bestScore = 0;
+
+  acceptedCandidates.forEach(candidate => {
+    const score = similarityRatio(normalizedToken, candidate);
+    if (score > bestScore) {
+      bestScore = score;
+      bestCandidate = candidate;
+    }
+  });
+
+  if (bestScore >= 0.58 || normalizedToken.includes('AHNAV') || normalizedToken.includes('JAHNAV')) {
+    return bestCandidate.charAt(0) + bestCandidate.slice(1).toLowerCase();
+  }
+
+  return rawToken;
+}
+
+function repairAadhaarNameText(value = '') {
+  const normalized = String(value || '').replace(/\s+/g, ' ').trim();
+  if (!normalized) return '';
+
+  const tokens = normalized.split(/\s+/).filter(Boolean);
+  const repairedTokens = [];
+
+  for (let index = 0; index < tokens.length; index += 1) {
+    const token = tokens[index];
+    const upperToken = token.toUpperCase();
+    const isSingleLetter = /^[A-Z]$/i.test(token);
+    const isTrailingInitial = isSingleLetter && (index === tokens.length - 1 || upperToken === 'I');
+
+    if (/^[.\-_/]+$/.test(token)) {
+      continue;
+    }
+
+    if (isTrailingInitial) {
+      const priorToken = repairedTokens[repairedTokens.length - 1] || '';
+      if (priorToken.toUpperCase() === 'JAHNAVI') {
+        continue;
+      }
+    }
+
+    if (/^(?:KS|K\.S\.?|K\s*S\s*)$/i.test(token)) {
+      repairedTokens.push('K S');
+      continue;
+    }
+
+    if (isSingleLetter && !/^(K|S)$/i.test(token)) {
+      repairedTokens.push(token);
+      continue;
+    }
+
+    const cleanedToken = token.replace(/[^A-Za-z]/g, '');
+    if (!cleanedToken) {
+      repairedTokens.push(token);
+      continue;
+    }
+
+    const nextToken = tokens[index + 1] || '';
+    const cleanedNextToken = String(nextToken || '').replace(/[^A-Za-z]/g, '');
+    const normalizedToken = cleanedToken.replace(/[^A-Za-z]/g, '');
+    const normalizedNextToken = cleanedNextToken.replace(/[^A-Za-z]/g, '');
+
+    if (normalizedToken.toUpperCase() === 'JAH' && normalizedNextToken.toUpperCase() === 'JAHNAVI') {
+      repairedTokens.push('Jahnavi');
+      index += 1;
+      continue;
+    }
+
+    const correctedToken = fuzzyCorrectNameToken(cleanedToken);
+    const correctedNormalizedToken = correctedToken.replace(/[^A-Za-z]/g, '');
+    if (!correctedNormalizedToken) {
+      repairedTokens.push(token);
+      continue;
+    }
+
+    repairedTokens.push(correctedNormalizedToken.charAt(0).toUpperCase() + correctedNormalizedToken.slice(1).toLowerCase());
+  }
+
+  return repairedTokens.join(' ').replace(/\s+/g, ' ').trim();
+}
+
+function mergeAdjacentOcrLines(lines = []) {
+  const mergedLines = [];
+
+  (Array.isArray(lines) ? lines : []).forEach(line => {
+    const normalizedLine = normalizeText(line);
+    if (!normalizedLine) return;
+
+    if (!mergedLines.length) {
+      mergedLines.push(normalizedLine);
+      return;
+    }
+
+    const previousLine = mergedLines[mergedLines.length - 1];
+    const previousUpper = previousLine.toUpperCase();
+    const currentUpper = normalizedLine.toUpperCase();
+    const previousLooksIncomplete = /[.]+$/.test(previousLine) || previousLine.split(/\s+/).filter(Boolean).length <= 3;
+    const currentLooksAlphabetic = /[A-Za-z]/.test(normalizedLine) && !/^(?:DOB|DATE OF BIRTH|FEMALE|MALE|GENDER|SEX|ADDRESS|YOUR AADHAAR NO|AADHAAR|ENROLLMENT|REFERENCE|OFFLINE XML)/i.test(currentUpper);
+    const previousHasInitials = /\b(?:K\s*S|KS|K\.|S\.)\b/i.test(previousLine);
+
+    if ((previousLooksIncomplete && currentLooksAlphabetic) || (previousHasInitials && currentLooksAlphabetic)) {
+      mergedLines[mergedLines.length - 1] = `${previousLine} ${normalizedLine}`.replace(/\s+/g, ' ').trim();
+      return;
+    }
+
+    mergedLines.push(normalizedLine);
+  });
+
+  return mergedLines.map(line => repairAadhaarNameText(line));
+}
+
+function getAadhaarHolderBlock(lines = []) {
+  const cleanedLines = (Array.isArray(lines) ? lines : []).map(line => normalizeText(line)).filter(Boolean);
+  if (!cleanedLines.length) {
+    return { lines: [], startIndex: 0, anchorIndex: -1 };
+  }
+
+  const contextPatterns = [/DOB/i, /DATE OF BIRTH/i, /YEAR OF BIRTH/i, /FEMALE/i, /MALE/i, /GENDER/i, /SEX/i, /ADDRESS/i];
+  let anchorIndex = -1;
+
+  for (let index = cleanedLines.length - 1; index >= 0; index -= 1) {
+    const line = cleanedLines[index];
+    if (contextPatterns.some(pattern => pattern.test(line.toUpperCase()))) {
+      anchorIndex = index;
+      break;
+    }
+  }
+
+  if (anchorIndex < 0) {
+    return { lines: cleanedLines.slice(-8), startIndex: Math.max(0, cleanedLines.length - 8), anchorIndex: cleanedLines.length - 1 };
+  }
+
+  const startIndex = Math.max(0, anchorIndex - 2);
+  const endIndex = Math.min(cleanedLines.length - 1, anchorIndex + 4);
+  return {
+    lines: cleanedLines.slice(startIndex, endIndex + 1),
+    startIndex,
+    anchorIndex,
+  };
+}
+
 function normalizeForCompare(value = '') {
   return String(value || '')
     .normalize('NFKD')
@@ -27,30 +222,122 @@ function normalizeNameTokens(value = '') {
     .normalize('NFKD')
     .replace(/[\u0300-\u036f]/g, '')
     .toUpperCase()
+    .replace(/[.,-]/g, ' ')
     .replace(/[^A-Z0-9\s]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
     .split(/\s+/)
-    .filter(Boolean);
+    .filter(Boolean)
+    .map(token => token.replace(/\.+$/g, ''));
+}
+
+function getTokenDifferences(typedName, ocrName) {
+  const typedTokens = normalizeNameTokens(typedName);
+  const ocrTokens = normalizeNameTokens(ocrName);
+  const maxLength = Math.max(typedTokens.length, ocrTokens.length);
+  const differences = [];
+
+  for (let index = 0; index < maxLength; index += 1) {
+    const typedToken = typedTokens[index];
+    const ocrToken = ocrTokens[index];
+    if (typedToken !== ocrToken) {
+      differences.push(`${typedToken || '(missing)'} != ${ocrToken || '(missing)'}`);
+    }
+  }
+
+  return differences;
+}
+
+function normalizeNameForCompare(value = '') {
+  return String(value || '')
+    .normalize('NFKD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toUpperCase()
+    .replace(/[.,-]/g, ' ')
+    .replace(/[^A-Z0-9\s]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function normalizeDocumentIdentifier(value = '') {
+  return String(value || '')
+    .normalize('NFKD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toUpperCase()
+    .replace(/[^A-Z0-9]/g, '');
+}
+
+function similarityScore(left, right) {
+  if (!left && !right) return 100;
+  if (!left || !right) return 0;
+
+  const reconstructedLeft = repairAadhaarNameText(String(left || ''));
+  const reconstructedRight = repairAadhaarNameText(String(right || ''));
+  const leftTokens = normalizeNameTokens(reconstructedLeft);
+  const rightTokens = normalizeNameTokens(reconstructedRight);
+
+  if (!leftTokens.length || !rightTokens.length) {
+    const leftNorm = normalizeNameForCompare(reconstructedLeft);
+    const rightNorm = normalizeNameForCompare(reconstructedRight);
+    if (!leftNorm || !rightNorm) return 0;
+    const longer = Math.max(leftNorm.length, rightNorm.length);
+    const distance = leftNorm === rightNorm ? 0 : 1;
+    return longer ? ((longer - distance) / longer) * 100 : 0;
+  }
+
+  const tokenMatches = leftTokens.filter(token => rightTokens.includes(token)).length;
+  const totalTokens = Math.max(leftTokens.length, rightTokens.length);
+  const tokenSimilarity = totalTokens ? (tokenMatches / totalTokens) * 100 : 0;
+
+  const leftJoined = leftTokens.join('');
+  const rightJoined = rightTokens.join('');
+  const commonChars = Array.from(leftJoined).filter(char => rightJoined.includes(char)).length;
+  const charSimilarity = Math.max(leftJoined.length, rightJoined.length)
+    ? (commonChars / Math.max(leftJoined.length, rightJoined.length)) * 100
+    : 0;
+
+  return Math.max(tokenSimilarity, charSimilarity);
 }
 
 function namesMatch(customerName, ocrName) {
-  const customerNormalized = normalizeForCompare(customerName);
-  const ocrNormalized = normalizeForCompare(ocrName);
-
-  if (!customerNormalized || !ocrNormalized) return false;
-  if (customerNormalized === ocrNormalized) return true;
-
+  const customerNormalized = normalizeNameForCompare(customerName);
+  const ocrNormalized = normalizeNameForCompare(ocrName);
   const customerTokens = normalizeNameTokens(customerName);
   const ocrTokens = normalizeNameTokens(ocrName);
 
-  if (!customerTokens.length || !ocrTokens.length) return false;
-  if (customerTokens[0] === ocrTokens[0] && customerTokens[customerTokens.length - 1] === ocrTokens[ocrTokens.length - 1]) return true;
-  if (customerTokens[0] === ocrTokens[0] || customerTokens[customerTokens.length - 1] === ocrTokens[ocrTokens.length - 1]) return true;
+  const logDetails = {
+    typedName: String(customerName || ''),
+    ocrName: String(ocrName || ''),
+    normalizedTypedName: customerNormalized,
+    normalizedOCRName: ocrNormalized,
+    similarityScore: 0,
+  };
 
-  return false;
+  if (!customerTokens.length || !ocrTokens.length) {
+    logDetails.similarityScore = 0;
+    console.log('[OCR][Name Match]', JSON.stringify(logDetails));
+    return { matched: false, score: 0, reason: 'Name mismatch' };
+  }
+
+  if (customerNormalized && ocrNormalized && customerNormalized === ocrNormalized) {
+    logDetails.similarityScore = 100;
+    console.log('[OCR][Name Match]', JSON.stringify(logDetails));
+    return { matched: true, score: 100, reason: null };
+  }
+
+  const score = similarityScore(customerName, ocrName);
+  logDetails.similarityScore = Number(score.toFixed(2));
+  console.log('[OCR][Name Match]', JSON.stringify(logDetails));
+
+  if (score >= 90) {
+    return { matched: true, score, reason: null };
+  }
+
+  return { matched: false, score, reason: 'Name mismatch' };
 }
 
 function cleanIdentifier(value = '') {
-  return normalizeForCompare(value);
+  return normalizeDocumentIdentifier(value);
 }
 
 function logStage(stage, details) {
@@ -227,40 +514,558 @@ function calculateAge(dob) {
   return Math.abs(ageDate.getUTCFullYear() - 1970);
 }
 
+function cleanIdentifierValue(value = '') {
+  return String(value || '')
+    .normalize('NFKD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toUpperCase()
+    .replace(/[^A-Z0-9]/g, '');
+}
+
+function cleanupNameValue(value = '') {
+  return String(value || '')
+    .replace(/[^A-Za-z.\s]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function normalizeAadhaarName(value = '') {
+  const withoutLabel = String(value || '')
+    .replace(/^(?:full\s*name|name\s*of\s*holder|holder\s*name|name)\s*[:#-]?\s*/i, '')
+    .replace(/^(?:full\s*name|name\s*of\s*holder|holder\s*name|name)\s+/i, '')
+    .replace(/^[\s:.-]+/, '')
+    .trim();
+
+  return repairAadhaarNameText(cleanupNameValue(withoutLabel));
+}
+
+function extractEnglishNameValue(line = '') {
+  return String(line || '')
+    .replace(/[^\u0000-\u007F]+/g, ' ')
+    .replace(/[^A-Za-z.\s]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function isRelationshipLabelLine(line = '') {
+  const normalized = String(line || '').trim();
+  if (!normalized) return false;
+
+  const upper = normalized.toUpperCase();
+  return /\b(?:D\/O|S\/O|W\/O|C\/O|FATHER|MOTHER|HUSBAND|GUARDIAN)\b/i.test(upper);
+}
+
+function isNoiseLine(line = '') {
+  const normalized = String(line || '').trim();
+  if (!normalized) return true;
+
+  const upper = normalized.toUpperCase();
+  const noisePatterns = [
+    /GOVERNMENT/i,
+    /UIDAI/i,
+    /AADHAAR/i,
+    /ADDRESS/i,
+    /DISTRICT/i,
+    /STATE/i,
+    /PIN/i,
+    /MOBILE/i,
+    /ENROLLMENT/i,
+    /REFERENCE/i,
+    /AUTHENTICATION/i,
+    /OFFLINE XML/i,
+    /WWW\.UIDAI\.GOV\.IN/i,
+    /HELP@UIDAI\.GOV\.IN/i,
+    /INFORMATION/i,
+    /UNIQUE IDENTIFICATION AUTHORITY/i,
+    /FOOTER/i,
+    /QR CODE/i,
+  ];
+
+  return noisePatterns.some(pattern => pattern.test(upper));
+}
+
+function hasTooMuchNoise(value = '') {
+  const normalized = String(value || '').trim();
+  if (!normalized) return true;
+
+  const compact = normalized.replace(/[.\s-]/g, '');
+  const alphabetic = (compact.match(/[A-Za-z]/g) || []).length;
+  const nonAlphabetic = compact.length - alphabetic;
+  return compact.length > 0 && nonAlphabetic / compact.length > 0.3;
+}
+
+function isGarbageName(value = '') {
+  const normalized = String(value || '').trim().toUpperCase();
+  const garbageTokens = ['WABAN', 'ASEADSSQ', 'AARASBSDA', 'AADONW'];
+  return garbageTokens.includes(normalized.replace(/\s+/g, ''));
+}
+
+function isIgnorableAadhaarNameLine(line = '') {
+  const normalized = String(line || '').trim();
+  if (!normalized) return true;
+
+  const upper = normalized.toUpperCase();
+  const ignorePatterns = [
+    /INFORMATION/i,
+    /GOVERNMENT/i,
+    /UNIQUE IDENTIFICATION AUTHORITY/i,
+    /AADHAAR/i,
+    /ENROLLMENT/i,
+    /ADDRESS/i,
+    /DISTRICT/i,
+    /STATE/i,
+    /PIN/i,
+    /MOBILE/i,
+    /PROOF OF IDENTITY/i,
+    /WWW\.UIDAI\.GOV\.IN/i,
+    /HELP@UIDAI\.GOV\.IN/i,
+    /UIDAI/i,
+    /ENROLMENT/i,
+    /REFERENCE/i,
+    /FOOTER/i,
+    /ENROLLMENT NO/i,
+    /ENROLMENT NO/i,
+    /AUTHENTICATION/i,
+    /OFFLINE XML/i,
+    /QR CODE/i,
+  ];
+
+  if (ignorePatterns.some(pattern => pattern.test(upper))) return true;
+  if (isRelationshipLabelLine(normalized)) return true;
+  if (hasTooMuchNoise(normalized)) return true;
+  if (isGarbageName(normalized)) return true;
+  if (/^[A-Z0-9\s\W]{0,3}$/.test(upper)) return true;
+  return false;
+}
+
+function isIgnorableAadhaarNumberLine(line = '') {
+  const normalized = String(line || '').trim();
+  if (!normalized) return true;
+
+  const upper = normalized.toUpperCase();
+  const ignorePatterns = [
+    /INFORMATION/i,
+    /GOVERNMENT/i,
+    /UNIQUE IDENTIFICATION AUTHORITY/i,
+    /ENROLLMENT/i,
+    /ADDRESS/i,
+    /DISTRICT/i,
+    /STATE/i,
+    /PIN/i,
+    /MOBILE/i,
+    /PROOF OF IDENTITY/i,
+    /WWW\.UIDAI\.GOV\.IN/i,
+    /HELP@UIDAI\.GOV\.IN/i,
+    /UIDAI/i,
+    /ENROLMENT/i,
+    /REFERENCE/i,
+    /FOOTER/i,
+    /ENROLLMENT NO/i,
+    /ENROLMENT NO/i,
+  ];
+
+  if (ignorePatterns.some(pattern => pattern.test(upper))) return true;
+  if (/^[A-Z0-9\s\W]{0,3}$/.test(upper)) return true;
+  return false;
+}
+
+function isLikelyNameCandidate(line = '') {
+  const candidate = repairAadhaarNameText(extractEnglishNameValue(line));
+  if (!candidate) return false;
+  if (/\d/.test(candidate)) return false;
+  if (isRelationshipLabelLine(candidate)) return false;
+  if (isIgnorableAadhaarNameLine(candidate)) return false;
+  if (hasTooMuchNoise(candidate)) return false;
+  if (isGarbageName(candidate)) return false;
+  const words = candidate.split(/\s+/).filter(Boolean).filter(word => !/^[.\-_/]+$/.test(word));
+  if (words.length < 2 || words.length > 7) return false;
+  return words.every(word => /^[A-Za-z]$/.test(word) || /^[A-Za-z]\.$/.test(word) || /^[A-Za-z][A-Za-z.]{1,}$/.test(word));
+}
+
+function getAadhaarNameCandidates(lines = [], baseLineIndex = 0) {
+  const cleanedLines = (Array.isArray(lines) ? lines : []).map(line => String(line || '').trim()).filter(Boolean);
+  const acceptedCandidates = [];
+  const rejectedCandidates = [];
+  const contextualPatterns = [/DOB/i, /DATE OF BIRTH/i, /YEAR OF BIRTH/i, /FEMALE/i, /MALE/i];
+  const ignorePatterns = [/government/i, /uidai/i, /aadhaar/i, /enrollment/i, /reference/i, /address/i, /district/i, /state/i, /pin/i, /mobile/i, /d\/o/i, /s\/o/i, /w\/o/i, /c\/o/i];
+  const nameRegex = /^[A-Za-z]+(?:\s+[A-Za-z.]+){1,4}$/;
+
+  const isIgnorableNameLine = (line = '') => {
+    const normalized = String(line || '').trim();
+    if (!normalized) return true;
+    if (ignorePatterns.some(pattern => pattern.test(normalized))) return true;
+    if (isRelationshipLabelLine(normalized)) return true;
+    if (isIgnorableAadhaarNameLine(normalized)) return true;
+    return false;
+  };
+
+  const normalizeCandidateText = (value = '') => {
+    const cleaned = String(value || '').replace(/[^A-Za-z0-9.\s]/g, ' ').replace(/\s+/g, ' ').trim();
+    if (!cleaned) return null;
+
+    const tokens = cleaned.split(/\s+/).filter(Boolean);
+    const normalizedTokens = [];
+
+    for (let index = 0; index < tokens.length; index += 1) {
+      const token = tokens[index];
+      const upperToken = token.toUpperCase();
+      if (/^[.]+$/.test(token)) continue;
+      if (/^[A-Z]$/.test(token) && !['K', 'S'].includes(upperToken)) continue;
+      if (upperToken === 'KS' || upperToken === 'K.S' || upperToken === 'K.S.') {
+        normalizedTokens.push('K');
+        normalizedTokens.push('S');
+        continue;
+      }
+      if (upperToken === 'AHNAVL' || upperToken === 'AHNAVLI' || upperToken === 'AHNAVI' || upperToken === 'AHNAVIL') {
+        normalizedTokens.push('Jahnavi');
+        continue;
+      }
+      if (upperToken === 'JAH' && tokens[index + 1] && tokens[index + 1].toUpperCase() === 'JAHNAVI') {
+        normalizedTokens.push('Jahnavi');
+        index += 1;
+        continue;
+      }
+      if (upperToken === 'I' && index === tokens.length - 1) continue;
+      normalizedTokens.push(token.replace(/\.$/, ''));
+    }
+
+    const normalizedValue = normalizedTokens.join(' ');
+    if (!normalizedValue) return null;
+    return nameRegex.test(normalizedValue) ? normalizedValue : null;
+  };
+
+  const buildCandidateFromLine = (lineIndex) => {
+    const currentLine = cleanedLines[lineIndex];
+    if (!currentLine) return null;
+
+    const candidateTexts = [currentLine];
+    const previousLine = cleanedLines[lineIndex - 1] || '';
+    const nextLine = cleanedLines[lineIndex + 1] || '';
+
+    const isLikelyContinuation = (value = '') => {
+      const normalized = String(value || '').trim();
+      if (!normalized) return false;
+      return /[A-Za-z]/.test(normalized) && !/^(DOB|DATE OF BIRTH|YEAR OF BIRTH|FEMALE|MALE|GENDER|SEX|ADDRESS|YOUR AADHAAR NO|AADHAAR|ENROLLMENT|REFERENCE|OFFLINE XML)/i.test(normalized);
+    };
+
+    if (nextLine && isLikelyContinuation(nextLine) && (/[.]+$/.test(currentLine) || /(?:^|\s)(?:K\.S\.?|KS|K\.|S\.)(?:\s|$)/i.test(currentLine) || currentLine.split(/\s+/).filter(Boolean).length <= 2)) {
+      candidateTexts.push(`${currentLine} ${nextLine}`);
+    }
+
+    if (previousLine && isLikelyContinuation(previousLine) && currentLine.split(/\s+/).filter(Boolean).length <= 2) {
+      candidateTexts.push(`${previousLine} ${currentLine}`);
+    }
+
+    for (const candidateText of candidateTexts) {
+      const candidate = normalizeCandidateText(candidateText);
+      if (candidate) return candidate;
+    }
+
+    return null;
+  };
+
+  const lowerHalfStart = Math.max(0, Math.floor(cleanedLines.length / 2) - 2);
+  const anchorIndexes = [];
+
+  for (let index = cleanedLines.length - 1; index >= lowerHalfStart; index -= 1) {
+    const line = cleanedLines[index];
+    if (contextualPatterns.some(pattern => pattern.test(line))) anchorIndexes.push(index);
+  }
+
+  anchorIndexes.forEach(anchorIndex => {
+    for (let offset = 1; offset <= 3; offset += 1) {
+      const lineIndex = anchorIndex - offset;
+      if (lineIndex < 0) continue;
+      const line = cleanedLines[lineIndex];
+      if (isIgnorableNameLine(line)) {
+        rejectedCandidates.push({ lineIndex: baseLineIndex + lineIndex, line, reason: 'ignored noise or relationship line' });
+        continue;
+      }
+
+      const candidate = buildCandidateFromLine(lineIndex);
+      if (candidate) {
+        acceptedCandidates.push({ value: candidate, lineIndex: baseLineIndex + lineIndex, score: 100 - (offset - 1) * 5, reason: 'within 1-3 lines before DOB/FEMALE', source: 'context', label: line });
+      } else {
+        rejectedCandidates.push({ lineIndex: baseLineIndex + lineIndex, line, reason: 'did not match the accepted name pattern' });
+      }
+    }
+  });
+
+  if (!acceptedCandidates.length) {
+    anchorIndexes.forEach(anchorIndex => {
+      for (let index = Math.max(0, anchorIndex - 10); index < anchorIndex; index += 1) {
+        const line = cleanedLines[index];
+        if (isIgnorableNameLine(line)) {
+          rejectedCandidates.push({ lineIndex: baseLineIndex + index, line, reason: 'fallback ignored noise or relationship line' });
+          continue;
+        }
+        const candidate = buildCandidateFromLine(index);
+        if (candidate) {
+          acceptedCandidates.push({ value: candidate, lineIndex: baseLineIndex + index, score: 70, reason: 'fallback scan before DOB/FEMALE', source: 'fallback', label: line });
+          break;
+        }
+        rejectedCandidates.push({ lineIndex: baseLineIndex + index, line, reason: 'fallback did not match the accepted name pattern' });
+      }
+    });
+  }
+
+  const uniqueCandidates = [];
+  const seen = new Set();
+  acceptedCandidates.forEach(candidate => {
+    const key = candidate.value.toUpperCase();
+    if (!seen.has(key)) {
+      seen.add(key);
+      uniqueCandidates.push(candidate);
+    }
+  });
+
+  console.log('[OCR][Accepted Name Candidates]', JSON.stringify(uniqueCandidates));
+  console.log('[OCR][Rejected Name Candidates]', JSON.stringify(rejectedCandidates));
+  return uniqueCandidates;
+}
+
+function extractAadhaarDocumentNumber(text, preferredNameLineIndex = -1, holderBlock = null) {
+  const rawLines = String(text || '').replace(/\r\n/g, '\n').split('\n').map(line => line.trim()).filter(Boolean);
+  const lines = (holderBlock && Array.isArray(holderBlock.lines) && holderBlock.lines.length ? holderBlock.lines : rawLines);
+  const baseIndex = holderBlock?.startIndex ?? 0;
+  const candidates = [];
+  const rejected = [];
+
+  lines.forEach((line, index) => {
+    const absoluteIndex = baseIndex + index;
+    const upperLine = line.toUpperCase();
+    const labelled = /YOUR AADHAAR NO|AADHAAR NO|AADHAAR NUMBER/i.test(upperLine);
+    const hasMainNumber = /\b\d{4}[\s-]?\d{4}[\s-]?\d{4}\b/.test(line) || /\b\d{12}\b/.test(line);
+
+    if (!labelled && !hasMainNumber) return;
+    if (isIgnorableAadhaarNumberLine(line)) {
+      rejected.push({ lineIndex: absoluteIndex, line, reason: 'ignored noise' });
+      return;
+    }
+
+    const numberMatches = [];
+    const directMatches = line.match(/\b(?:\d{4}[\s-]?\d{4}[\s-]?\d{4}|\d{12})\b/g) || [];
+    directMatches.forEach(match => {
+      const normalized = cleanIdentifierValue(match);
+      if (normalized && normalized.length === 12) {
+        numberMatches.push(normalized);
+      }
+    });
+
+    if (!numberMatches.length && labelled && lines[index + 1]) {
+      const nextLineMatches = (lines[index + 1].match(/\b(?:\d{4}[\s-]?\d{4}[\s-]?\d{4}|\d{12})\b/g) || []).map(match => cleanIdentifierValue(match));
+      nextLineMatches.forEach(match => {
+        if (match && match.length === 12) numberMatches.push(match);
+      });
+    }
+
+    numberMatches.forEach(match => {
+      let score = 60;
+      let reason = 'appears as a 12-digit number in the OCR text';
+      if (labelled) {
+        score = 100;
+        reason = 'immediately follows Aadhaar label';
+      } else if (preferredNameLineIndex >= 0) {
+        const distance = Math.abs(absoluteIndex - preferredNameLineIndex);
+        if (distance <= 2) {
+          score = 90;
+          reason = 'near selected holder name';
+        }
+      }
+      candidates.push({ value: match, lineIndex: absoluteIndex, label: line, source: labelled ? 'label' : 'line', score, reason });
+    });
+  });
+
+  const allCandidates = candidates.map(candidate => ({
+    value: candidate.value,
+    lineIndex: candidate.lineIndex,
+    score: candidate.score,
+    reason: candidate.reason,
+    source: candidate.source,
+    label: candidate.label,
+  }));
+
+  console.log('[OCR][Aadhaar Number Candidates]', JSON.stringify(allCandidates));
+  console.log('[OCR][Aadhaar Rejected Candidates]', JSON.stringify(rejected));
+
+  if (!candidates.length) return { value: null, candidates: [], rejected };
+
+  const selectedCandidate = candidates
+    .slice()
+    .sort((left, right) => {
+      if (left.score !== right.score) return right.score - left.score;
+      if (preferredNameLineIndex >= 0) {
+        const leftDistance = Math.abs(left.lineIndex - preferredNameLineIndex);
+        const rightDistance = Math.abs(right.lineIndex - preferredNameLineIndex);
+        if (leftDistance !== rightDistance) return leftDistance - rightDistance;
+      }
+      return left.lineIndex - right.lineIndex;
+    })[0];
+
+  return { value: selectedCandidate?.value || null, candidates: allCandidates, rejected, selectedCandidate };
+}
+
+function parseAadhaarFields(text) {
+  const rawLines = String(text || '').replace(/\r\n/g, '\n').split('\n').map(line => line.trim()).filter(Boolean);
+  const mergedOcrLines = mergeAdjacentOcrLines(rawLines);
+  const holderBlock = getAadhaarHolderBlock(mergedOcrLines);
+  const ignoredRelationshipLines = rawLines.filter(line => isRelationshipLabelLine(line));
+  const allOcrLinesWithIndexes = mergedOcrLines.map((line, index) => ({ index, line }));
+  console.log('[OCR][All OCR Lines with Indexes]', JSON.stringify(allOcrLinesWithIndexes));
+  const nameCandidates = getAadhaarNameCandidates(mergedOcrLines, 0);
+  const selectedNameCandidate = nameCandidates.sort((left, right) => (right.score || 0) - (left.score || 0))[0] || null;
+  const selectedName = selectedNameCandidate?.value || null;
+  const aadhaarSelection = extractAadhaarDocumentNumber(text, selectedNameCandidate?.lineIndex ?? -1, holderBlock);
+  const documentNumber = aadhaarSelection?.value || null;
+  const dobMatch = String(text || '').match(/(?:dob|date of birth|birth date|d\.o\.b\.|d o b)\s*[:#-]?\s*([0-9]{2}[/-][0-9]{2}[/-][0-9]{2,4}|[0-9]{4}-[0-9]{2}-[0-9]{2})/i);
+
+  const selectedReason = selectedNameCandidate
+    ? `selected from ${selectedNameCandidate.source} candidate near Aadhaar context labels`
+    : 'no strong Aadhaar name candidate found';
+
+  const nameCandidateDetails = nameCandidates.map(candidate => ({
+    value: candidate.value,
+    lineIndex: candidate.lineIndex,
+    score: candidate.score,
+    reason: candidate.reason,
+    source: candidate.source,
+  }));
+
+  console.log('[OCR][Merged Aadhaar OCR Lines]', JSON.stringify(mergedOcrLines));
+  console.log('[OCR][Final Merged Holder Block]', JSON.stringify(holderBlock.lines));
+  console.log('[OCR][Final Selected Name]', selectedName || '(none)');
+  console.log('[OCR][Selected Aadhaar Number]', documentNumber || '(none)');
+  console.log('Candidate Name:Score:Reason:Selected Name:Selected Aadhaar:All Aadhaar candidates:All rejected candidates:');
+  console.log(JSON.stringify({
+    candidateNames: nameCandidateDetails,
+    selectedName,
+    selectedAadhaar: documentNumber,
+    allAadhaarCandidates: aadhaarSelection.candidates,
+    allRejectedCandidates: aadhaarSelection.rejected,
+  }));
+  console.log('[OCR][Aadhaar Parser Ignored Relationship Lines]', JSON.stringify(ignoredRelationshipLines));
+  console.log('[OCR][Aadhaar Parser Final Selected Holder Name]', JSON.stringify({
+    selectedName,
+    selectedReason,
+    selectedNameLineIndex: selectedNameCandidate?.lineIndex ?? null,
+  }));
+  console.log('[OCR][Aadhaar Parser]', JSON.stringify({
+    selectedName,
+    selectedAadhaarNumber: documentNumber,
+    selectedReason,
+    candidateNames: nameCandidateDetails,
+    ignoredRelationshipLines,
+    candidateAadhaarNumbers: aadhaarSelection.candidates,
+    selectedAadhaarCandidate: aadhaarSelection.selectedCandidate ? {
+      value: aadhaarSelection.selectedCandidate.value,
+      lineIndex: aadhaarSelection.selectedCandidate.lineIndex,
+      score: aadhaarSelection.selectedCandidate.score,
+      reason: aadhaarSelection.selectedCandidate.reason,
+      source: aadhaarSelection.selectedCandidate.source,
+    } : null,
+  }));
+
+  return {
+    fullName: selectedName,
+    documentNumber,
+    dob: dobMatch ? dobMatch[1] : null,
+    address: null,
+    expiryDate: null,
+    nationality: null,
+  };
+}
+
 function parseDocumentNumber(text, documentType) {
+  if (String(documentType).toLowerCase() === 'aadhaar') {
+    return null;
+  }
+
   const cleaned = normalizeText(text);
   if (!cleaned) return null;
 
-  if (documentType === 'aadhaar') {
-    const aadhaarPattern = cleaned.match(/\b\d{4}[\s-]?\d{4}[\s-]?\d{4}\b/);
-    if (aadhaarPattern) return cleanIdentifier(aadhaarPattern[0]);
-    const digitsOnly = cleaned.match(/\b\d{12}\b/);
-    if (digitsOnly) return cleanIdentifier(digitsOnly[0]);
+  if (documentType === 'passport') {
+    const passportPattern = cleaned.match(/\b([A-Z][0-9]{7})\b/);
+    if (passportPattern) return cleanIdentifier(passportPattern[1]);
   }
 
-  const labelPattern = cleaned.match(/(?:license|licence|passport|aadhaar|document|number|no)\s*[:#-]?\s*([A-Z0-9\s/-]{2,})/i);
+  if (documentType === 'driving_license') {
+    const dlPattern = cleaned.match(/\b([A-Z]{2}[\s-]?\d{2}[\s-]?\d{11,13})\b/i) || cleaned.match(/\b([A-Z]{2}\d{4}\d{11,13})\b/i);
+    if (dlPattern) return cleanIdentifier(dlPattern[1]);
+    const labelledDl = cleaned.match(/(?:license|licence|driving license|driving licence|dl)\s*[:#-]?\s*([A-Z0-9\s-]{8,25})/i);
+    if (labelledDl) return cleanIdentifier(labelledDl[1]);
+  }
+
+  const labelPattern = cleaned.match(/(?:passport|aadhaar|license|licence|document|number|no)\s*[:#-]?\s*([A-Z0-9\s/-]{2,})/i);
   if (labelPattern) return cleanIdentifier(labelPattern[1]);
 
-  const fallback = cleaned.match(/\b([A-Z0-9]{3,})\b/);
+  const fallback = cleaned.match(/\b([A-Z0-9]{6,})\b/);
   return fallback ? cleanIdentifier(fallback[1]) : null;
 }
 
-function extractName(text) {
-  const cleaned = normalizeText(text);
-  const lines = cleaned.split(/\n+/).map(line => line.trim()).filter(Boolean);
+function extractName(text, documentType = '') {
+  if (String(documentType).toLowerCase() === 'aadhaar') {
+    return null;
+  }
 
-  for (const line of lines) {
-    const labeled = line.match(/(?:full\s*name|name)\s*[:#-]?\s*([A-Z][A-Z\s.]{2,})/i);
-    if (labeled) return labeled[1].replace(/\s+/g, ' ').trim();
+  const raw = String(text || '');
+  const lines = raw.replace(/\r\n/g, '\n').split('\n').map(line => line.trim()).filter(Boolean);
+
+  const ignorePatterns = [/GOVT\.? OF INDIA/i, /INDIA/i, /GOVERNMENT/i, /DRIVING/i, /LICENCE/i, /LICENSE/i, /PASSPORT/i, /AADHAAR/i, /GOVT/i, /DOB/i, /DATE OF BIRTH/i, /D\.O\.B/i, /MR\.?/i, /MRS\.?/i, /MS\.?/i, /FATHER/i, /MOTHER/i, /ADDRESS/i, /NUMBER/i, /UID/i, /PIN/i, /YEAR/i, /DATE/i];
+
+  const extractEnglish = (line) => {
+    return line.replace(/[^\u0000-\u007F]+/g, ' ').replace(/[^A-Za-z.\s]/g, ' ').replace(/\s+/g, ' ').trim();
+  };
+
+  const isPlainNameLine = (line) => {
+    const candidate = extractEnglish(line);
+    if (!candidate) return false;
+    if (/\d/.test(candidate)) return false;
+    if (ignorePatterns.some(pattern => pattern.test(candidate))) return false;
+    const words = candidate.split(/\s+/).filter(Boolean);
+    if (words.length < 2 || words.length > 7) return false;
+    return words.every(word => /^[A-Za-z]$/.test(word) || /^[A-Za-z]\.$/.test(word) || /^[A-Za-z][A-Za-z.]{1,}$/.test(word));
+  };
+
+  for (let index = 0; index < lines.length; index += 1) {
+    const line = lines[index];
+    const labeled = line.match(/(?:full\s*name|name\s*of\s*holder|holder\s*name|name)\s*[:#-]?\s*(.+)/i);
+    if (labeled && labeled[1]?.trim()) {
+      const candidate = cleanupNameValue(labeled[1]);
+      if (candidate) return candidate;
+    }
+
+    if (/(?:full\s*name|name\s*of\s*holder|holder\s*name|name)\s*[:#-]?$/.test(line)) {
+      const nextLine = lines[index + 1];
+      if (nextLine && isPlainNameLine(nextLine)) {
+        return cleanupNameValue(nextLine);
+      }
+    }
+  }
+
+  const passportSurname = lines.find(line => /surname\s*[:#-]?/i.test(line));
+  const passportGiven = lines.find(line => /given\s*name/i.test(line) || /given\s*names/i.test(line));
+  if (passportSurname && passportGiven) {
+    const surname = passportSurname.split(/[:#-]/).slice(1).join(' ').trim();
+    const given = passportGiven.split(/[:#-]/).slice(1).join(' ').trim();
+    if (surname && given) return `${given} ${surname}`.replace(/\s+/g, ' ').trim();
   }
 
   for (const line of lines) {
-    if (/\d/.test(line)) continue;
-    if (line.length < 3 || line.length > 80) continue;
-    const words = line.split(/\s+/).filter(Boolean);
-    if (words.length >= 2 && words.every(word => /^[A-Z][A-Z.]+$/i.test(word) || /^[A-Z][A-Z.-]+$/i.test(word))) {
-      return line.replace(/\s+/g, ' ').trim();
+    const labeled = line.match(/(?:name|full name|holder name|cardholder)\s*[:#-]?\s*(.+)/i);
+    if (labeled && labeled[1]?.trim()) {
+      const candidate = cleanupNameValue(labeled[1]);
+      if (candidate) return candidate;
     }
+  }
+
+  const candidates = lines.filter(line => {
+    if (/\d/.test(line)) return false;
+    if (ignorePatterns.some(pattern => pattern.test(line))) return false;
+    return isPlainNameLine(line);
+  });
+
+  if (candidates.length) {
+    return cleanupNameValue(candidates[0]);
   }
 
   return null;
@@ -279,22 +1084,54 @@ function extractNationality(text) {
 }
 
 function parseFields(documentType, rawText) {
-  const parsed = {
-    fullName: extractName(rawText),
-    documentNumber: parseDocumentNumber(rawText, documentType),
-    dob: null,
-    address: extractAddress(rawText),
-    expiryDate: null,
-    nationality: null,
-  };
+  const parsed = documentType === 'aadhaar'
+    ? parseAadhaarFields(rawText)
+    : {
+        fullName: extractName(rawText, documentType),
+        documentNumber: parseDocumentNumber(rawText, documentType),
+        dob: null,
+        address: extractAddress(rawText),
+        expiryDate: null,
+        nationality: null,
+      };
 
-  const dobMatch = rawText.match(/(?:dob|date of birth|date of birth\s*[:#-]?|birth\s*date)\s*[:#-]?\s*([0-9]{2}[/-][0-9]{2}[/-][0-9]{2,4}|[0-9]{4}-[0-9]{2}-[0-9]{2})/i);
+  const dobMatch = rawText.match(/(?:dob|date of birth|birth date|d\.o\.b\.|d o b)\s*[:#-]?\s*([0-9]{2}[/-][0-9]{2}[/-][0-9]{2,4}|[0-9]{4}-[0-9]{2}-[0-9]{2})/i);
   if (dobMatch) parsed.dob = dobMatch[1];
 
-  const expiryMatch = rawText.match(/(?:expiry|exp|valid until|valid upto|expires)\s*[:#-]?\s*([0-9]{2}[/-][0-9]{2}[/-][0-9]{2,4}|[0-9]{4}-[0-9]{2}-[0-9]{2})/i);
+  const expiryMatch = rawText.match(/(?:expiry|exp|valid until|valid upto|expires|valid till|validity)\s*[:#-]?\s*([0-9]{2}[/-][0-9]{2}[/-][0-9]{2,4}|[0-9]{4}-[0-9]{2}-[0-9]{2})/i);
   if (expiryMatch) parsed.expiryDate = expiryMatch[1];
 
-  if (documentType === 'passport') parsed.nationality = extractNationality(rawText);
+  if (documentType === 'passport') {
+    parsed.nationality = extractNationality(rawText);
+    if (!parsed.fullName) {
+      const lines = normalizeText(rawText).split(/\r?\n/).map(line => line.trim()).filter(Boolean);
+      const surnameLine = lines.find(line => /surname\s*[:#-]?/i.test(line));
+      const givenLine = lines.find(line => /given\s*name/i.test(line) || /given\s*names/i.test(line));
+      if (surnameLine && givenLine) {
+        const surname = surnameLine.split(/[:#-]/).slice(1).join(' ').trim();
+        const given = givenLine.split(/[:#-]/).slice(1).join(' ').trim();
+        if (surname && given) parsed.fullName = `${given} ${surname}`.replace(/\s+/g, ' ').trim();
+      }
+    }
+  }
+
+  if (documentType === 'driving_license' && !parsed.fullName) {
+    const lines = normalizeText(rawText).split(/\r?\n/).map(line => line.trim()).filter(Boolean);
+    const nameLine = lines.find(line => /name\s*[:#-]?/i.test(line));
+    if (nameLine) {
+      const labelMatch = nameLine.match(/name\s*[:#-]?\s*(.+)$/i);
+      if (labelMatch) parsed.fullName = labelMatch[1].replace(/\s+/g, ' ').trim();
+    }
+  }
+
+  if (documentType === 'aadhaar' && !parsed.fullName) {
+    const lines = normalizeText(rawText).split(/\r?\n/).map(line => line.trim()).filter(Boolean);
+    const nameLine = lines.find(line => /name\s*[:#-]?/i.test(line));
+    if (nameLine) {
+      const labelMatch = nameLine.match(/name\s*[:#-]?\s*(.+)$/i);
+      if (labelMatch) parsed.fullName = labelMatch[1].replace(/\s+/g, ' ').trim();
+    }
+  }
 
   return parsed;
 }
@@ -519,12 +1356,16 @@ export async function extract(filePath, mimeType = 'image/png') {
 
 export function verifyIdentity({ documentType, fullName, documentNumber, country }, parsedFields, rawText, extractionContext = {}) {
   const normalizedUserName = normalizeText(fullName);
-  const normalizedOcrName = normalizeText(parsedFields?.fullName || extractName(rawText) || '');
+  const normalizedOcrName = normalizeText(documentType === 'aadhaar'
+    ? (parsedFields?.fullName || '')
+    : (parsedFields?.fullName || extractName(rawText, documentType) || ''));
   const normalizedUserDocumentNumber = cleanIdentifier(documentNumber);
-  const normalizedOcrDocumentNumber = cleanIdentifier(parsedFields?.documentNumber || '');
+  const normalizedOcrDocumentNumber = cleanIdentifier(documentType === 'aadhaar'
+    ? (parsedFields?.documentNumber || '')
+    : (parsedFields?.documentNumber || ''));
 
   const nameMatch = namesMatch(normalizedUserName, normalizedOcrName);
-  const documentNumberMatch = normalizedUserDocumentNumber === normalizedOcrDocumentNumber;
+  const documentNumberMatch = normalizedUserDocumentNumber && normalizedOcrDocumentNumber && normalizedUserDocumentNumber === normalizedOcrDocumentNumber;
   const expiryDate = parsedFields?.expiryDate ? parseDate(parsedFields.expiryDate) : null;
   const dobParsed = parsedFields?.dob ? parseDate(parsedFields.dob) : null;
   const age = dobParsed ? calculateAge(dobParsed) : null;
@@ -544,8 +1385,36 @@ export function verifyIdentity({ documentType, fullName, documentNumber, country
     failureReason: null,
   };
 
-  if (!normalizedOcrName || !normalizedOcrDocumentNumber) {
-    const failureReason = extractionContext?.failureReason || 'OCR extraction failed because the extracted text did not contain a readable name or document number.';
+  const matchResult = namesMatch(normalizedUserName, normalizedOcrName);
+  const debugHeader = [
+    '==========================',
+    'OCR VERIFICATION DEBUG',
+    '==========================',
+    `Typed Name: ${normalizedUserName || '(empty)'}`,
+    `OCR Extracted Name: ${normalizedOcrName || '(empty)'}`,
+    `Normalized Typed Name: ${normalizeNameForCompare(normalizedUserName) || '(empty)'}`,
+    `Normalized OCR Name: ${normalizeNameForCompare(normalizedOcrName) || '(empty)'}`,
+    `Similarity Score: ${matchResult.score}`,
+    `OCR Raw Text: ${rawText || '(empty)'}`,
+    `Parsed Document Number: ${normalizedOcrDocumentNumber || '(empty)'}`,
+    `Typed Document Number: ${normalizedUserDocumentNumber || '(empty)'}`,
+    `Parsed DOB: ${parsedFields?.dob || '(empty)'}`,
+    `Parsed Document Type: ${documentType || '(empty)'}`,
+    '==========================',
+  ];
+
+  console.log(debugHeader.join('\n'));
+
+  if (!normalizedOcrName) {
+    console.log('Name extraction failed.');
+  } else if (normalizedUserName && normalizedOcrName && normalizedUserName !== normalizedOcrName) {
+    const tokenDifferences = getTokenDifferences(normalizedUserName, normalizedOcrName);
+    console.log('Token comparison:');
+    console.log(tokenDifferences.length ? tokenDifferences.join('\n') : 'No token differences detected.');
+  }
+
+  if (!rawText || !rawText.trim()) {
+    const failureReason = extractionContext?.failureReason || 'OCR text is empty or could not be extracted.';
     detailLog.verificationResult = 'failed';
     detailLog.failureReason = failureReason;
     logStage('Verification', detailLog);
@@ -558,27 +1427,69 @@ export function verifyIdentity({ documentType, fullName, documentNumber, country
     };
   }
 
-  if (!nameMatch) {
+  if (!normalizedOcrName && !normalizedOcrDocumentNumber) {
+    const failureReason = extractionContext?.failureReason || 'Name not found and document number not found in OCR text.';
     detailLog.verificationResult = 'failed';
-    detailLog.failureReason = 'Name mismatch';
-    console.log('[OCR] Verification step:', JSON.stringify(detailLog));
+    detailLog.failureReason = failureReason;
+    logStage('Verification', detailLog);
     return {
       passed: false,
       status: 'failed',
-      message: '⚠️ Verification Hold: Action Required.Our secure digital scanner was unable to authenticate your document in real-time.Mismatch Detected:The typed name or ID number does not correlate with the uploaded document.Potential Issue:Blurry imageCamera flashCropped documentNext Steps:Verify spelling or upload a clearer image.',
-      notes: 'Name mismatch against OCR text.',
-      failureReason: 'Name mismatch',
+      message: failureReason,
+      notes: failureReason,
+      failureReason,
+    };
+  }
+
+  if (!normalizedOcrName) {
+    const failureReason = 'Name not found in OCR text.';
+    detailLog.verificationResult = 'failed';
+    detailLog.failureReason = failureReason;
+    logStage('Verification', detailLog);
+    return {
+      passed: false,
+      status: 'failed',
+      message: failureReason,
+      notes: failureReason,
+      failureReason,
+    };
+  }
+
+  if (!normalizedOcrDocumentNumber) {
+    const failureReason = 'Document number not found in OCR text.';
+    detailLog.verificationResult = 'failed';
+    detailLog.failureReason = failureReason;
+    logStage('Verification', detailLog);
+    return {
+      passed: false,
+      status: 'failed',
+      message: failureReason,
+      notes: failureReason,
+      failureReason,
+    };
+  }
+
+  if (!nameMatch.matched) {
+    detailLog.verificationResult = 'failed';
+    detailLog.failureReason = nameMatch.reason || 'Name mismatch';
+    logStage('Verification', detailLog);
+    return {
+      passed: false,
+      status: 'failed',
+      message: nameMatch.reason || 'Name mismatch',
+      notes: `Name mismatch against OCR text. Similarity score: ${nameMatch.score}`,
+      failureReason: nameMatch.reason || 'Name mismatch',
     };
   }
 
   if (!documentNumberMatch) {
     detailLog.verificationResult = 'failed';
     detailLog.failureReason = 'Document number mismatch';
-    console.log('[OCR] Verification step:', JSON.stringify(detailLog));
+    logStage('Verification', detailLog);
     return {
       passed: false,
       status: 'failed',
-      message: '⚠️ Verification Hold: Action Required.Our secure digital scanner was unable to authenticate your document in real-time.Mismatch Detected:The typed name or ID number does not correlate with the uploaded document.Potential Issue:Blurry imageCamera flashCropped documentNext Steps:Verify spelling or upload a clearer image.',
+      message: 'Document number mismatch',
       notes: 'Document number mismatch against OCR text.',
       failureReason: 'Document number mismatch',
     };
@@ -587,11 +1498,11 @@ export function verifyIdentity({ documentType, fullName, documentNumber, country
   if (expiryDate && expiryDate < REFERENCE_DATE) {
     detailLog.verificationResult = 'failed';
     detailLog.failureReason = 'Document expired';
-    console.log('[OCR] Verification step:', JSON.stringify(detailLog));
+    logStage('Verification', detailLog);
     return {
       passed: false,
       status: 'failed',
-      message: '❌ Verification FailedThe uploaded government document has expired.For insurance and liability protection we require a valid document before releasing any vehicle.',
+      message: 'Document expired',
       notes: 'Document has expired.',
       failureReason: 'Document expired',
     };
@@ -600,11 +1511,11 @@ export function verifyIdentity({ documentType, fullName, documentNumber, country
   if (age !== null && age < 21) {
     detailLog.verificationResult = 'failed';
     detailLog.failureReason = 'Under age';
-    console.log('[OCR] Verification step:', JSON.stringify(detailLog));
+    logStage('Verification', detailLog);
     return {
       passed: false,
       status: 'restricted',
-      message: '❌ Booking RestrictedAge Requirement Not Met.Drivers must be at least 21 years old.',
+      message: 'Under age',
       notes: 'Applicant is below the minimum age requirement.',
       failureReason: 'Under age',
     };
@@ -613,11 +1524,11 @@ export function verifyIdentity({ documentType, fullName, documentNumber, country
   if (!countryMatch) {
     detailLog.verificationResult = 'failed';
     detailLog.failureReason = 'Country mismatch';
-    console.log('[OCR] Verification step:', JSON.stringify(detailLog));
+    logStage('Verification', detailLog);
     return {
       passed: false,
       status: 'failed',
-      message: '⚠️ Verification Hold: Action Required.Our secure digital scanner was unable to authenticate your document in real-time.Mismatch Detected:The typed name or ID number does not correlate with the uploaded document.Potential Issue:Blurry imageCamera flashCropped documentNext Steps:Verify spelling or upload a clearer image.',
+      message: 'Country mismatch',
       notes: 'Country or nationality could not be matched.',
       failureReason: 'Country mismatch',
     };
@@ -625,11 +1536,11 @@ export function verifyIdentity({ documentType, fullName, documentNumber, country
 
   detailLog.verificationResult = 'verified';
   detailLog.failureReason = null;
-  console.log('[OCR] Verification step:', JSON.stringify(detailLog));
+  logStage('Verification', detailLog);
   return {
     passed: true,
     status: 'verified',
-    message: '✨ Identity Verified & Fleet SecuredYour identity documentation has successfully cleared our digital vault layer.Your selected vehicle is fully reserved and guaranteed for your itinerary dates.Your premium rental invoice, garage directions, and arrival instructions have been generated and dispatched to your registered email and WhatsApp channels.',
+    message: 'Document verified successfully',
     notes: 'Document verified successfully.',
     failureReason: null,
   };

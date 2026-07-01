@@ -46,13 +46,20 @@ export default function CarDetail() {
   });
 
   useEffect(() => {
+    let cancelled = false;
     async function fetchCar() {
       if (!id) return;
       const data = await vehicleApi.get(id);
+      if (cancelled) return;
       setCar(data);
       setLoading(false);
     }
     fetchCar();
+    const interval = window.setInterval(fetchCar, 15000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(interval);
+    };
   }, [id]);
 
   function getTotalDays() {
@@ -189,9 +196,9 @@ export default function CarDetail() {
                     <span className="text-white font-semibold">{car.rating}</span>
                     <span className="text-cream/80 text-sm">({car.reviews_count} reviews)</span>
                   </div>
-                  <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full ${car.availability ? 'bg-green-500/20 border border-green-500/40 text-green-600' : 'bg-red-500/20 border border-red-500/40 text-red-600'}`}>
-                    <div className={`w-2 h-2 rounded-full ${car.availability ? 'bg-green-500' : 'bg-red-500'}`} />
-                    <span className="text-xs font-montserrat font-semibold">{car.availability ? 'Available' : 'Booked'}</span>
+                  <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full ${((car.status || (car.availability ? 'available' : 'booked')) === 'available') ? 'bg-green-500/20 border border-green-500/40 text-green-600' : ((car.status === 'maintenance') ? 'bg-orange-500/20 border border-orange-500/40 text-orange-600' : 'bg-red-500/20 border border-red-500/40 text-red-600')}`}>
+                    <div className={`w-2 h-2 rounded-full ${((car.status || (car.availability ? 'available' : 'booked')) === 'available') ? 'bg-green-500' : (car.status === 'maintenance' ? 'bg-orange-500' : 'bg-red-500')}`} />
+                    <span className="text-xs font-montserrat font-semibold">{car.status || (car.availability ? 'Available' : 'Booked')}</span>
                   </div>
                 </div>
               </motion.div>
@@ -299,8 +306,8 @@ export default function CarDetail() {
                     <p className="text-stone font-poppins text-sm mb-6">
                       Status: <span className="font-semibold text-earth">Pending</span>
                     </p>
-                    <Link to="/dashboard" className="btn-gold justify-center w-full" style={{ borderRadius: '8px' }}>
-                      View My Bookings
+                    <Link to="/booking" className="btn-gold justify-center w-full" style={{ borderRadius: '8px' }}>
+                      Continue Booking
                     </Link>
                   </div>
                 ) : (
@@ -445,16 +452,16 @@ export default function CarDetail() {
                     )}
 
                     <motion.button
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
+                      whileHover={{ scale: !bookLoading && ((car.status || (car.availability ? 'available' : 'booked')) === 'available') ? 1.02 : 1 }}
+                      whileTap={{ scale: !bookLoading && ((car.status || (car.availability ? 'available' : 'booked')) === 'available') ? 0.98 : 1 }}
                       onClick={handleBook}
-                      disabled={bookLoading || !car.availability}
-                      className="w-full btn-gold justify-center py-4 mb-4"
+                      disabled={bookLoading || ((car.status || (car.availability ? 'available' : 'booked')) !== 'available')}
+                      className={`w-full justify-center py-4 mb-4 rounded-2xl text-sm font-semibold transition ${((car.status || (car.availability ? 'available' : 'booked')) === 'available') ? 'btn-gold' : 'bg-white/10 text-[#7A7466] cursor-not-allowed'}`}
                       style={{ borderRadius: '8px' }}
                     >
                       {bookLoading ? (
                         <span className="flex items-center gap-2"><div className="w-4 h-4 border-2 border-cream/40 border-t-cream rounded-full animate-spin" />Processing...</span>
-                      ) : !car.availability ? 'Not Available' : 'Verify & Book'}
+                      ) : ((car.status || (car.availability ? 'available' : 'booked')) !== 'available') ? 'Not Available' : 'Verify & Book'}
                     </motion.button>
 
                     <div className="flex gap-2">

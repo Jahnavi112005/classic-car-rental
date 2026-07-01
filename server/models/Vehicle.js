@@ -2,6 +2,7 @@ import mongoose from 'mongoose';
 
 const vehicleSchema = new mongoose.Schema(
   {
+    seedId: { type: Number },
     name: { type: String, required: true },
     brand: { type: String, required: true },
     model: { type: String, required: true },
@@ -17,6 +18,8 @@ const vehicleSchema = new mongoose.Schema(
     images: [{ type: String }],
     features: [{ type: String }],
     availability: { type: Boolean, default: true },
+    status: { type: String, enum: ['available', 'booked', 'maintenance'], default: 'available' },
+    isDeleted: { type: Boolean, default: false },
     security_deposit: { type: Number, default: 5000 },
     rating: { type: Number, default: 4.5 },
     reviews_count: { type: Number, default: 0 },

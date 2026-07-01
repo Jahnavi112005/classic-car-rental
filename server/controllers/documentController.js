@@ -58,8 +58,30 @@ export const uploadDocument = async (req, res) => {
   logStage('Upload', { filename: req.file.originalname, mimetype: req.file.mimetype, size: req.file.size, localPath });
   const ocrResult = await extract(localPath, req.file.mimetype).catch(err => ({ error: err.message }));
   const rawText = ocrResult?.raw || '';
+  console.log('RAW OCR TEXT:');
+  console.log(rawText);
   const parsedFields = parseIdentityFields(req.body.documentType || req.body.type || 'other', rawText);
-  logStage('Text Parsing', { documentType: req.body.documentType || req.body.type || 'other', parsedFields });
+  const parsedName = parsedFields?.fullName || null;
+  const parsedDocumentNumber = parsedFields?.documentNumber || null;
+  const parsedDOB = parsedFields?.dob || null;
+  logStage('Text Parsing', {
+    documentType: req.body.documentType || req.body.type || 'other',
+    parsedFields,
+    parsedName,
+    parsedDocumentNumber,
+    parsedDOB,
+  });
+
+  const userName = String(req.body.fullName || '').trim();
+  const normalizedUserName = userName.toLowerCase().replace(/[^a-z\s]/gi, ' ').replace(/\s+/g, ' ').trim();
+  const normalizedRawLower = rawText.toLowerCase();
+  const rawContainsName = normalizedUserName && normalizedRawLower.includes(normalizedUserName);
+
+  if (!rawContainsName) {
+    console.log('OCR did not detect the customer\'s name.');
+  } else if (rawContainsName && !parsedName) {
+    console.log('Name parsing failed.');
+  }
   const verification = verifyIdentity(
     {
       documentType: req.body.documentType || req.body.type || 'other',
@@ -94,7 +116,8 @@ export const uploadDocument = async (req, res) => {
   });
 
   logStage('Booking Creation', { createdDocumentId: doc._id, status: doc.status, verificationStatus: doc.verificationStatus });
-  res.status(201).json({
+
+  const responsePayload = {
     _id: doc._id,
     id: doc._id,
     fileUrl: doc.fileUrl,
@@ -102,6 +125,22 @@ export const uploadDocument = async (req, res) => {
     verificationStatus: verification.passed ? 'verified' : 'rejected',
     verificationMessage: verification.message,
     verificationNotes: verification.notes,
+    rawText: rawText,
     ocr: doc.ocr,
-  });
+  };
+
+  if (process.env.NODE_ENV !== 'production') {
+    responsePayload.debug = {
+      typedName: req.body.fullName || '',
+      parsedName: parsedName || '',
+      parsedDocumentNumber: parsedDocumentNumber || '',
+      typedDocumentNumber: req.body.documentNumber || '',
+      parsedDOB: parsedDOB || '',
+      parsedDocumentType: req.body.documentType || req.body.type || 'other',
+      rawText,
+      verification,
+    };
+  }
+
+  res.status(201).json(responsePayload);
 };

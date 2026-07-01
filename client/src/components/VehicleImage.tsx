@@ -110,7 +110,7 @@ function analyzeImageUrl(url: string): Promise<ImageAnalysis> {
         const result = { hasTransparency, whiteBackground, needsReplacement };
         imageAnalysisCache.set(url, result);
         resolve(result);
-      } catch (error) {
+      } catch {
         const fallback = { hasTransparency: false, whiteBackground: false, needsReplacement: false };
         imageAnalysisCache.set(url, fallback);
         resolve(fallback);

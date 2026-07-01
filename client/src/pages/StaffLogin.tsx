@@ -3,9 +3,9 @@ import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Shield, Eye, EyeOff, LogIn, ArrowLeft } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { getDefaultDashboardPath } from '../utils/roles';
+import { normalizeRole } from '../utils/roles';
 
-export default function AdminLogin() {
+export default function StaffLogin() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPw, setShowPw] = useState(false);
@@ -21,7 +21,7 @@ export default function AdminLogin() {
     const { error: err, profile } = await signIn(email, password);
     setLoading(false);
     if (err) {
-      setError('Invalid credentials. Admin access only.');
+      setError('Invalid credentials. Staff access only.');
       return;
     }
     setTimeout(() => {
@@ -59,26 +59,26 @@ export default function AdminLogin() {
             <div className="w-16 h-16 rounded-full bg-gradient-to-br from-stone-dark to-earth-dark border-2 border-brown/40 flex items-center justify-center mx-auto mb-4 shadow-brown">
               <Shield className="w-8 h-8 text-brown" />
             </div>
-            <h1 className="font-playfair text-2xl font-bold text-earth">Admin Portal</h1>
+            <h1 className="font-playfair text-2xl font-bold text-earth">Staff Portal</h1>
             <p className="text-stone font-poppins text-sm mt-1">Authorized Personnel Only</p>
             <div className="w-12 h-0.5 bg-brown-gradient mx-auto mt-3" />
           </div>
 
           <div className="bg-brown/5 border border-brown/20 rounded-xl p-4 mb-6">
             <p className="text-xs font-poppins text-stone text-center">
-              This portal is restricted to administrators of Classic Car Rental.
+              This portal is restricted to internal staff of Classic Car Rental.
             </p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-5">
             <div>
-              <label className="block text-xs font-montserrat font-semibold text-brown uppercase tracking-wider mb-2">Admin Email</label>
-              <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="admin@classiccar.rentals" required className="input-luxury" />
+              <label className="block text-xs font-montserrat font-semibold text-brown uppercase tracking-wider mb-2">Staff Email</label>
+              <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="staff@classiccarrentals.in" required className="input-luxury" />
             </div>
             <div>
               <label className="block text-xs font-montserrat font-semibold text-brown uppercase tracking-wider mb-2">Password</label>
               <div className="relative">
-                <input type={showPw ? 'text' : 'password'} value={password} onChange={e => setPassword(e.target.value)} placeholder="Admin password" required className="input-luxury pr-12" />
+                <input type={showPw ? 'text' : 'password'} value={password} onChange={e => setPassword(e.target.value)} placeholder="Password" required className="input-luxury pr-12" />
                 <button type="button" onClick={() => setShowPw(!showPw)} className="absolute right-3 top-1/2 -translate-y-1/2 text-stone hover:text-brown transition-colors">
                   {showPw ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                 </button>
@@ -95,7 +95,7 @@ export default function AdminLogin() {
               {loading ? (
                 <span className="flex items-center gap-2"><div className="w-4 h-4 border-2 border-cream/40 border-t-cream rounded-full animate-spin" />Authenticating...</span>
               ) : (
-                <><LogIn className="w-4 h-4" />Admin Login</>
+                <><LogIn className="w-4 h-4" />Staff Login</>
               )}
             </motion.button>
           </form>
