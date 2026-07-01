@@ -10,6 +10,7 @@ import { useAuth } from '../context/AuthContext';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import WhatsAppFloat from '../components/WhatsAppFloat';
+import EmailFloat from '../components/EmailFloat';
 import { whatsAppUrl } from '../utils/whatsapp';
 
 type IdentityDocumentType = 'driving_license' | 'aadhaar' | 'passport' | 'pan' | '';
@@ -489,6 +490,7 @@ export default function CarDetail() {
       </div>
       <Footer />
       <WhatsAppFloat />
+      <EmailFloat />
     </div>
   );
 }

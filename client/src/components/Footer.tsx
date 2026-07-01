@@ -69,7 +69,7 @@ export default function Footer({ onBranchClick }: FooterProps = {}) {
               </div>
               <div className="flex items-center gap-3 text-sm text-stone-light font-poppins">
                 <Mail className="w-4 h-4 text-brown flex-shrink-0" />
-                info@classiccar.rentals
+                owner@classiccarrentals.in
               </div>
             </div>
 

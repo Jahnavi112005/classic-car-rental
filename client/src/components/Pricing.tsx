@@ -167,9 +167,16 @@ function PricingTable({
             {title}
           </h3>
         </div>
-        <p className={`text-xs font-montserrat ${highlight ? 'text-cream/70' : 'text-stone'}`}>
-          Security Deposit: ₹{defaultDeposit.toLocaleString()}
-        </p>
+        <div className="flex flex-wrap items-center gap-3">
+          <p className={`text-xs font-montserrat ${highlight ? 'text-cream/70' : 'text-stone'}`}>
+            Security Deposit: ₹{defaultDeposit.toLocaleString()}
+          </p>
+          {isLuxury && (
+            <span className="text-[10px] tracking-[0.3em] uppercase text-white bg-brown px-2 py-1 rounded-full">
+              Coming Soon
+            </span>
+          )}
+        </div>
       </div>
 
       {/* Table */}

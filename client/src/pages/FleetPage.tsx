@@ -7,6 +7,7 @@ import VehicleImage from '../components/VehicleImage';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import WhatsAppFloat from '../components/WhatsAppFloat';
+import EmailFloat from '../components/EmailFloat';
 import BranchPopup from '../components/BranchPopup';
 import { whatsAppUrl } from '../utils/whatsapp';
 import { vehicleApi } from '../services/api';
@@ -209,6 +210,7 @@ export default function FleetPage() {
 
       <Footer onBranchClick={() => setBranchOpen(true)} />
       <WhatsAppFloat />
+      <EmailFloat />
       <BranchPopup open={branchOpen} onClose={() => setBranchOpen(false)} />
     </div>
   );
