@@ -13,7 +13,7 @@ export type Profile = {
   name: string;
   email?: string;
   phone: string;
-  role: 'user' | 'admin';
+  role: 'booking_staff' | 'owner';
   avatar_url: string;
   created_at: string;
   updated_at: string;
@@ -37,6 +37,8 @@ export type Car = {
   images: string[];
   features: string[];
   availability: boolean;
+  status?: 'available' | 'booked' | 'maintenance';
+  isDeleted?: boolean;
   security_deposit: number;
   rating: number;
   reviews_count: number;

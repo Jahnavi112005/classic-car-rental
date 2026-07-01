@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Menu, X, LogOut, User, LayoutDashboard, Shield } from 'lucide-react';
+import { Menu, X, LogOut, LayoutDashboard, Shield } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { normalizeRole } from '../utils/roles';
 
 const navLinks = [
   { label: 'Home', href: '/' },
@@ -167,7 +168,7 @@ export default function Navbar() {
                       : { borderColor: '#D4A44A', color: '#D4A44A', background: 'transparent' }
                   }
                 >
-                  <User className="w-3.5 h-3.5" />
+                  {profile?.name?.split(' ')[0] || 'Account'}
                   {profile?.name?.split(' ')[0] || 'Account'}
                 </button>
                 <AnimatePresence>
@@ -177,27 +178,22 @@ export default function Navbar() {
                       animate={{ opacity: 1, y: 0, scale: 1 }}
                       exit={{ opacity: 0, y: 8, scale: 0.95 }}
                       transition={{ duration: 0.2 }}
-                      className="absolute right-0 mt-2 w-52 rounded-xl shadow-lg overflow-hidden border"
-                      style={{ background: '#1A1A1A', borderColor: 'rgba(212,164,74,0.2)' }}
-                    >
-                      <Link to="/dashboard" onClick={() => setDropdownOpen(false)} className="flex items-center gap-3 px-4 py-3 text-sm text-gray-200 hover:bg-gold/10 hover:text-gold transition-colors">
-                        <LayoutDashboard className="w-4 h-4" />My Dashboard
-                      </Link>
-                      {profile?.role === 'admin' && (
-                        <Link to="/admin" onClick={() => setDropdownOpen(false)} className="flex items-center gap-3 px-4 py-3 text-sm text-gray-200 hover:bg-gold/10 hover:text-gold transition-colors">
-                          <Shield className="w-4 h-4" />Admin Panel
+                        className="absolute right-0 mt-2 w-52 rounded-xl shadow-lg overflow-hidden border"
+                        style={{ background: '#1A1A1A', borderColor: 'rgba(212,164,74,0.2)' }}
+                      >
+                        <Link to={normalizeRole(profile?.role) === 'owner' ? '/owner/dashboard' : '/booking/dashboard'} onClick={() => setDropdownOpen(false)} className="flex items-center gap-3 px-4 py-3 text-sm text-gray-200 hover:bg-gold/10 hover:text-gold transition-colors">
+                          <LayoutDashboard className="w-4 h-4" />{normalizeRole(profile?.role) === 'owner' ? 'Owner Panel' : 'Staff Panel'}
                         </Link>
-                      )}
-                      <button onClick={handleSignOut} className="flex items-center gap-3 px-4 py-3 text-sm text-red-400 hover:bg-red-400/10 transition-colors w-full">
-                        <LogOut className="w-4 h-4" />Sign Out
-                      </button>
-                    </motion.div>
+                        <button onClick={handleSignOut} className="flex items-center gap-3 px-4 py-3 text-sm text-red-400 hover:bg-red-400/10 transition-colors w-full">
+                          <LogOut className="w-4 h-4" />Sign Out
+                        </button>
+                      </motion.div>
                   )}
                 </AnimatePresence>
               </div>
             ) : (
               <Link
-                to="/admin-login"
+                to="/login"
                 className="flex items-center gap-2 font-montserrat font-semibold text-xs px-5 py-2.5 rounded-full border transition-all duration-300 hover:opacity-80"
                 style={
                   isLight
@@ -206,7 +202,7 @@ export default function Navbar() {
                 }
               >
                 <Shield className="w-3.5 h-3.5" />
-                ADMIN LOGIN
+                Staff Login
               </Link>
             )}
           </div>
@@ -260,8 +256,8 @@ export default function Navbar() {
               )}
               {user ? (
                 <>
-                  <Link to="/dashboard" className="btn-gold text-sm justify-center mt-2">
-                    <LayoutDashboard className="w-4 h-4" />My Dashboard
+                  <Link to={normalizeRole(profile?.role) === 'owner' ? '/owner/dashboard' : '/booking/dashboard'} className="btn-gold text-sm justify-center mt-2">
+                    <LayoutDashboard className="w-4 h-4" />{normalizeRole(profile?.role) === 'owner' ? 'Owner Panel' : 'Staff Panel'}
                   </Link>
                   <button onClick={handleSignOut} className="text-red-400 text-sm font-montserrat text-center py-2">Sign Out</button>
                 </>
@@ -274,11 +270,11 @@ export default function Navbar() {
                     Book Now
                   </button>
                   <Link
-                    to="/admin-login"
+                    to="/login"
                     className="font-montserrat font-semibold text-xs px-5 py-3 rounded-full border text-center mt-2"
                     style={{ borderColor: '#7B4A1E', color: '#7B4A1E' }}
                   >
-                    ADMIN LOGIN
+                    STAFF LOGIN
                   </Link>
                 </>
               )}

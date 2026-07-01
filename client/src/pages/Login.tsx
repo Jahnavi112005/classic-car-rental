@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Crown, Eye, EyeOff, LogIn, ArrowLeft } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { normalizeRole } from '../utils/roles';
 
 export default function Login() {
   const [email, setEmail] = useState('');
@@ -17,12 +18,15 @@ export default function Login() {
     e.preventDefault();
     setError('');
     setLoading(true);
-    const { error: err } = await signIn(email, password);
+    const { error: err, profile } = await signIn(email, password);
     setLoading(false);
     if (err) {
       setError('Invalid email or password. Please try again.');
     } else {
-      navigate('/dashboard');
+      // Redirect staff to their respective dashboards
+      const role = normalizeRole(profile?.role);
+      if (role === 'owner') navigate('/owner/dashboard');
+      else navigate('/booking/dashboard');
     }
   }
 
@@ -58,8 +62,8 @@ export default function Login() {
             <div className="w-16 h-16 rounded-full bg-brown-gradient flex items-center justify-center mx-auto mb-4 shadow-brown">
               <Crown className="w-8 h-8 text-cream" />
             </div>
-            <h1 className="font-playfair text-2xl font-bold text-earth">Welcome Back</h1>
-            <p className="text-stone font-poppins text-sm mt-1">Sign in to your account</p>
+            <h1 className="font-playfair text-2xl font-bold text-earth">Staff Login</h1>
+            <p className="text-stone font-poppins text-sm mt-1">Sign in with your Owner or Booking Staff account.</p>
             <div className="w-12 h-0.5 bg-brown-gradient mx-auto mt-3" />
           </div>
 

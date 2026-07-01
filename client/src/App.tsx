@@ -6,9 +6,8 @@ import CarDetail from './pages/CarDetail';
 import BookingPage from './pages/BookingPage';
 import Login from './pages/Login';
 import Register from './pages/Register';
-import AdminLogin from './pages/AdminLogin';
-import UserDashboard from './pages/UserDashboard';
-import AdminPanel from './pages/AdminPanel';
+import OwnerDashboard from './pages/OwnerDashboard';
+import BookingDashboard from './pages/BookingDashboard';
 
 function PageWrapper({ children }: { children: React.ReactNode }) {
   return (
@@ -32,13 +31,11 @@ export default function App() {
         <Route path="/fleet/:id" element={<PageWrapper><CarDetail /></PageWrapper>} />
         <Route path="/login" element={<PageWrapper><Login /></PageWrapper>} />
         <Route path="/register" element={<PageWrapper><Register /></PageWrapper>} />
-        <Route path="/admin-login" element={<PageWrapper><AdminLogin /></PageWrapper>} />
         <Route path="/booking" element={<PageWrapper><BookingPage /></PageWrapper>} />
-        <Route path="/dashboard" element={<PageWrapper><UserDashboard /></PageWrapper>} />
-        <Route path="/admin" element={<PageWrapper><AdminPanel /></PageWrapper>} />
+        <Route path="/booking/dashboard" element={<PageWrapper><BookingDashboard /></PageWrapper>} />
+        <Route path="/owner/dashboard" element={<PageWrapper><OwnerDashboard /></PageWrapper>} />
         <Route path="*" element={<PageWrapper><NotFound /></PageWrapper>} />
       </Routes>
-      {/* BookingRequestSection removed per request */}
     </AnimatePresence>
   );
 }

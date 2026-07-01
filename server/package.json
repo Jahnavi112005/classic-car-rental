@@ -7,7 +7,9 @@
   "scripts": {
     "dev": "nodemon server.js",
     "start": "node server.js",
-    "seed": "node scripts/seedAdmin.js"
+    "seed": "node scripts/seedAdmin.js",
+    "seed:vehicles": "node scripts/seedVehicles.js",
+    "seed:all": "npm run seed && npm run seed:vehicles"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",

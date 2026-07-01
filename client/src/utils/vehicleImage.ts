@@ -60,7 +60,7 @@ const imageCandidates: ImageCandidate[] = carImageFilenames.map((filename) => {
 
 function normalizeText(value: string) {
   const lower = String(value).toLowerCase();
-  const removed = lower.replace(/[\s_\-\.\/\,()]+/g, '');
+  const removed = lower.replace(/[-]+/g, '');
   const removedYears = removed.replace(/\d{4}(?:-\d{4})?/g, '');
   return removedYears.replace(/[^a-z0-9]/g, '');
 }

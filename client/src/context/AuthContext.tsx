@@ -8,8 +8,7 @@ type AuthContextType = {
   session: Session | null;
   profile: Profile | null;
   loading: boolean;
-  signUp: (email: string, password: string, name: string, phone: string) => Promise<{ error: Error | null }>;
-  signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
+  signIn: (email: string, password: string) => Promise<{ error: Error | null; profile?: Profile | null }>;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
 };
@@ -44,25 +43,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     hydrateSession().finally(() => setLoading(false));
   }, []);
 
-  async function signUp(email: string, password: string, name: string, phone: string) {
-    try {
-      const data = await authApi.register({ email, password, name, phone });
-      setSession(data.session);
-      setUser(data.session.user);
-      setProfile(data.profile);
-      return { error: null };
-    } catch (error) {
-      return { error: error as Error };
-    }
-  }
-
   async function signIn(email: string, password: string) {
     try {
       const data = await authApi.login({ email, password });
       setSession(data.session);
       setUser(data.session.user);
       setProfile(data.profile);
-      return { error: null };
+      return { error: null, profile: data.profile };
     } catch (error) {
       return { error: error as Error };
     }
@@ -76,7 +63,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, session, profile, loading, signUp, signIn, signOut, refreshProfile }}>
+    <AuthContext.Provider value={{ user, session, profile, loading, signIn, signOut, refreshProfile }}>
       {children}
     </AuthContext.Provider>
   );

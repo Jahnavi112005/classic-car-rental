@@ -3,7 +3,7 @@ import { asyncHandler } from '../utils/asyncHandler.js';
 import { profileFor } from '../services/tokenService.js';
 
 export const updateUser = asyncHandler(async (req, res) => {
-  if (String(req.user._id) !== req.params.id && req.user.role !== 'admin') {
+  if (String(req.user._id) !== req.params.id && !['owner', 'booking_staff'].includes(req.user.role)) {
     res.status(403);
     throw new Error('Not allowed to update this profile');
   }

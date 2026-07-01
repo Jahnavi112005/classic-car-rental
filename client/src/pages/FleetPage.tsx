@@ -3,13 +3,13 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Link, useSearchParams } from 'react-router-dom';
 import { Fuel, Settings, Users, Star, Search, SlidersHorizontal, X } from 'lucide-react';
 import { Car } from '../types';
-import { fleetCars } from '../data/fleet';
 import VehicleImage from '../components/VehicleImage';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import WhatsAppFloat from '../components/WhatsAppFloat';
 import BranchPopup from '../components/BranchPopup';
 import { whatsAppUrl } from '../utils/whatsapp';
+import { vehicleApi } from '../services/api';
 
 const categories = ['All', 'Hatchback', 'Sedan', 'SUV', 'Luxury', 'Premium Luxury'];
 const fuelTypes = ['All', 'Petrol', 'Diesel', 'Electric', 'Hybrid'];
@@ -29,8 +29,19 @@ export default function FleetPage() {
   const [branchOpen, setBranchOpen] = useState(false);
 
   useEffect(() => {
-    setCars(fleetCars);
-    setLoading(false);
+    let cancelled = false;
+    async function loadFleet() {
+      const list = await vehicleApi.list();
+      if (cancelled) return;
+      setCars((list || []).filter(car => !car.isDeleted));
+      setLoading(false);
+    }
+    loadFleet();
+    const interval = window.setInterval(loadFleet, 15000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(interval);
+    };
   }, []);
 
   useEffect(() => {
@@ -228,8 +239,8 @@ function FleetCarCard({ car, index }: { car: Car; index: number }) {
         </div>
         <div className="absolute top-3 right-3">
           <div className="flex items-center gap-1.5 bg-cream/90 backdrop-blur-sm px-2 py-1 rounded-full">
-            <div className={`w-1.5 h-1.5 rounded-full ${car.availability ? 'bg-green-500' : 'bg-red-500'}`} />
-            <span className="text-xs text-earth font-poppins">{car.availability ? 'Available' : 'Booked'}</span>
+            <div className={`w-1.5 h-1.5 rounded-full ${((car.status || (car.availability ? 'available' : 'booked')) === 'available') ? 'bg-green-500' : (car.status === 'maintenance' ? 'bg-orange-500' : 'bg-red-500')}`} />
+            <span className="text-xs text-earth font-poppins">{car.status || (car.availability ? 'Available' : 'Booked')}</span>
           </div>
         </div>
         <div className="absolute bottom-3 left-3 flex items-center gap-1">
@@ -255,8 +266,13 @@ function FleetCarCard({ car, index }: { car: Car; index: number }) {
           <Link to={`/fleet/${car.id}`} className="flex-1 text-center btn-outline-gold" style={{ fontSize: '11px', padding: '9px 10px' }}>
             Details
           </Link>
-          <Link to={`/fleet/${car.id}?book=true`} className="flex-1 text-center btn-gold" style={{ fontSize: '11px', padding: '9px 10px' }}>
-            Book Now
+          <Link
+            to={`/fleet/${car.id}?book=true`}
+            className={`flex-1 text-center rounded-lg px-3 py-2 text-[11px] font-semibold transition ${((car.status || (car.availability ? 'available' : 'booked')) === 'available') ? 'bg-brown text-white' : 'bg-white/10 text-[#7A7466] cursor-not-allowed'}`}
+            tabIndex={((car.status || (car.availability ? 'available' : 'booked')) === 'available') ? 0 : -1}
+            aria-disabled={((car.status || (car.availability ? 'available' : 'booked')) !== 'available')}
+          >
+            {((car.status || (car.availability ? 'available' : 'booked')) === 'available') ? 'Book Now' : (car.status === 'maintenance' ? 'Maintenance' : 'Not Available')}
           </Link>
         </div>
         <a

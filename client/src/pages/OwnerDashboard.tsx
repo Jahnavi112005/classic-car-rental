@@ -6,12 +6,13 @@ import {
   AlertCircle, Shield, Plus, Trash2, ToggleLeft, ToggleRight
 } from 'lucide-react';
 import { bookingApi, inquiryApi, vehicleApi } from '../services/api';
-import AdminBookings from './AdminBookings';
+import BookingDashboard from './BookingDashboard';
 import { Booking, Car as CarType, Inquiry } from '../types';
 import VehicleImage from '../components/VehicleImage';
 import { useAuth } from '../context/AuthContext';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
+import { normalizeRole } from '../utils/roles';
 
 const statusColors: Record<string, string> = {
   pending: 'bg-yellow-500/10 text-yellow-600 border-yellow-500/30',
@@ -21,7 +22,7 @@ const statusColors: Record<string, string> = {
   cancelled: 'bg-gray-500/10 text-gray-600 border-gray-500/30',
 };
 
-export default function AdminPanel() {
+export default function OwnerDashboard() {
   const { user, profile, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<'overview' | 'bookings' | 'cars' | 'inquiries' | 'bookingManagement'>('overview');
@@ -31,7 +32,7 @@ export default function AdminPanel() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!authLoading && (!user || profile?.role !== 'admin')) {
+    if (!authLoading && (!user || !['booking_staff', 'owner'].includes(normalizeRole(profile?.role)))) {
       navigate('/');
     }
   }, [user, profile, authLoading, navigate]);
@@ -48,7 +49,7 @@ export default function AdminPanel() {
       setInquiries(inquiryRes || []);
       setLoading(false);
     }
-    if (user && profile?.role === 'admin') fetchData();
+    if (user && ['booking_staff', 'owner'].includes(normalizeRole(profile?.role))) fetchData();
   }, [user, profile]);
 
   async function updateBookingStatus(id: string, status: string) {
@@ -84,7 +85,7 @@ export default function AdminPanel() {
     { label: 'New Inquiries', value: unreadInquiries, icon: Calendar, color: 'text-orange-600' },
   ];
 
-  const canManageBookings = profile?.email === 'booking@classiccarrentals.in' || profile?.email === 'owner@classiccarrentals.in';
+  const canManageBookings = normalizeRole(profile?.role) === 'booking_staff' || normalizeRole(profile?.role) === 'owner';
   const tabs: Array<{ key: 'overview' | 'bookings' | 'cars' | 'inquiries' | 'bookingManagement'; label: string }> = [
     { key: 'overview', label: 'Overview' },
     { key: 'bookings', label: `Bookings (${bookings.length})` },
@@ -109,7 +110,7 @@ export default function AdminPanel() {
             </div>
             <div>
               <h1 className="font-playfair text-3xl font-bold text-earth">
-                Admin <span className="text-gradient-brown">Dashboard</span>
+                Owner <span className="text-gradient-brown">Dashboard</span>
               </h1>
               <p className="text-stone font-poppins text-sm">Classic Car Rental - Control Panel</p>
             </div>
@@ -210,7 +211,7 @@ export default function AdminPanel() {
 
           {activeTab === 'bookingManagement' && canManageBookings && (
             <div>
-              <AdminBookings />
+              <BookingDashboard />
             </div>
           )}
 

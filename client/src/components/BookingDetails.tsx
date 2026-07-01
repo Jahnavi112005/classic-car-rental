@@ -5,7 +5,7 @@ import { Car } from '../types';
 
 type Props = { id: string | null; onClose: () => void };
 
-export default function AdminBookingDetails({ id, onClose }: Props) {
+export default function BookingDetails({ id, onClose }: Props) {
   const [booking, setBooking] = useState<Booking | null>(null);
   const [notes, setNotes] = useState('');
   const [vehicles, setVehicles] = useState<Car[]>([]);
@@ -18,7 +18,7 @@ export default function AdminBookingDetails({ id, onClose }: Props) {
       setBooking(data || null);
       // load vehicles
       const v = await vehicleApi.list();
-      setVehicles((v || []).filter((x: Car) => x.availability));
+      setVehicles((v || []).filter((x: Car) => !x.isDeleted && ((x.status || (x.availability ? 'available' : 'booked')) === 'available')));
       // load audit logs
       try {
         const a = await bookingActions.audit(id as string);
@@ -87,7 +87,7 @@ export default function AdminBookingDetails({ id, onClose }: Props) {
               </div>
             </div>
             <div className="mt-4">
-              <div className="text-sm font-semibold mb-2">Admin Notes</div>
+              <div className="text-sm font-semibold mb-2">Staff Notes</div>
               <textarea className="input-luxury h-24" value={notes} onChange={e => setNotes(e.target.value)} />
               <div className="flex gap-2 mt-2">
                 <button className="btn-gold" onClick={async () => {
@@ -147,7 +147,7 @@ export default function AdminBookingDetails({ id, onClose }: Props) {
             <div className="text-sm font-semibold mt-4 mb-2">Audit Log</div>
             <div className="text-xs bg-gray-50 p-3 rounded h-40 overflow-auto">
               {audit.map(a => (
-                <div key={a.id} className="mb-2">{new Date(a.ts).toLocaleString()} — {a.admin?.name || 'Admin'} — {a.action}</div>
+                <div key={a.id} className="mb-2">{new Date(a.ts).toLocaleString()} — {a.admin?.name || 'Staff'} — {a.action}</div>
               ))}
             </div>
           </div>

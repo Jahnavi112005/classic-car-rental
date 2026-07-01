@@ -36,11 +36,6 @@ export const authApi = {
     const { data } = await api.get<{ session: Session; profile: Profile }>('/auth/me');
     return data;
   },
-  async register(payload: { email: string; password: string; name: string; phone: string }) {
-    const { data } = await api.post<{ session: Session; profile: Profile }>('/auth/register', payload);
-    saveToken(data.session.token);
-    return data;
-  },
   async login(payload: { email: string; password: string }) {
     const { data } = await api.post<{ session: Session; profile: Profile }>('/auth/login', payload);
     saveToken(data.session.token);
@@ -64,13 +59,17 @@ export const vehicleApi = {
     const { data } = await api.patch<Car>(`/vehicles/${id}`, payload);
     return data;
   },
+  async updateStatus(id: string | number, status: string) {
+    const { data } = await api.patch<Car>(`/vehicles/${id}`, { status });
+    return data;
+  },
   async remove(id: string | number) {
     await api.delete(`/vehicles/${id}`);
   },
 };
 
 export const bookingApi = {
-  async list(params?: { userId?: string }) {
+  async list(params?: Record<string, string>) {
     const { data } = await api.get<Booking[]>('/bookings', { params });
     return data;
   },
@@ -139,13 +138,6 @@ export const inquiryApi = {
   },
   async update(id: string, payload: Partial<Inquiry>) {
     const { data } = await api.patch<Inquiry>(`/inquiries/${id}`, payload);
-    return data;
-  },
-};
-
-export const profileApi = {
-  async update(id: string, payload: Partial<Profile>) {
-    const { data } = await api.patch<Profile>(`/users/${id}`, payload);
     return data;
   },
 };

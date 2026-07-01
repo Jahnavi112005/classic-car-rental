@@ -2,16 +2,10 @@ import User from '../models/User.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { profileFor, sessionFor } from '../services/tokenService.js';
 
+// Registration disabled for public customers. Staff users must be created via seed or owner panel.
 export const register = asyncHandler(async (req, res) => {
-  const { email, password, name, phone } = req.body;
-  const exists = await User.findOne({ email });
-  if (exists) {
-    res.status(409);
-    throw new Error('Email is already registered');
-  }
-
-  const user = await User.create({ email, password, name, phone });
-  res.status(201).json({ session: sessionFor(user), profile: profileFor(user) });
+  res.status(404);
+  throw new Error('Registration is disabled');
 });
 
 export const login = asyncHandler(async (req, res) => {
@@ -21,6 +15,12 @@ export const login = asyncHandler(async (req, res) => {
   if (!user || !(await user.matchPassword(password))) {
     res.status(401);
     throw new Error('Invalid email or password');
+  }
+
+  const validRoles = ['owner', 'booking_staff'];
+  if (!validRoles.includes(user.role)) {
+    res.status(403);
+    throw new Error('Access denied');
   }
 
   res.json({ session: sessionFor(user), profile: profileFor(user) });
