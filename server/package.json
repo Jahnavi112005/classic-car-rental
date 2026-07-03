@@ -21,6 +21,7 @@
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.5.4",
     "multer": "^1.4.5-lts.1",
+    "nodemailer": "^6.9.4",
     "pdf-parse": "^2.4.5",
     "pdfjs-dist": "^6.1.200",
     "tesseract.js": "^7.0.0"

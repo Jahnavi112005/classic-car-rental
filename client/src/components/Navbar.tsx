@@ -181,8 +181,8 @@ export default function Navbar() {
                         className="absolute right-0 mt-2 w-52 rounded-xl shadow-lg overflow-hidden border"
                         style={{ background: '#1A1A1A', borderColor: 'rgba(212,164,74,0.2)' }}
                       >
-                        <Link to={normalizeRole(profile?.role) === 'owner' ? '/owner/dashboard' : '/booking/dashboard'} onClick={() => setDropdownOpen(false)} className="flex items-center gap-3 px-4 py-3 text-sm text-gray-200 hover:bg-gold/10 hover:text-gold transition-colors">
-                          <LayoutDashboard className="w-4 h-4" />{normalizeRole(profile?.role) === 'owner' ? 'Owner Panel' : 'Staff Panel'}
+                        <Link to="/booking/dashboard" onClick={() => setDropdownOpen(false)} className="flex items-center gap-3 px-4 py-3 text-sm text-gray-200 hover:bg-gold/10 hover:text-gold transition-colors">
+                          <LayoutDashboard className="w-4 h-4" />Staff Panel
                         </Link>
                         <button onClick={handleSignOut} className="flex items-center gap-3 px-4 py-3 text-sm text-red-400 hover:bg-red-400/10 transition-colors w-full">
                           <LogOut className="w-4 h-4" />Sign Out
@@ -256,8 +256,8 @@ export default function Navbar() {
               )}
               {user ? (
                 <>
-                  <Link to={normalizeRole(profile?.role) === 'owner' ? '/owner/dashboard' : '/booking/dashboard'} className="btn-gold text-sm justify-center mt-2">
-                    <LayoutDashboard className="w-4 h-4" />{normalizeRole(profile?.role) === 'owner' ? 'Owner Panel' : 'Staff Panel'}
+                  <Link to="/booking/dashboard" className="btn-gold text-sm justify-center mt-2">
+                    <LayoutDashboard className="w-4 h-4" />Staff Panel
                   </Link>
                   <button onClick={handleSignOut} className="text-red-400 text-sm font-montserrat text-center py-2">Sign Out</button>
                 </>
