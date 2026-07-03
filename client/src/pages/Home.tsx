@@ -24,7 +24,7 @@ export default function Home() {
   }, []);
 
   return (
-    <div className="min-h-screen" style={{ paddingTop: '120px' }}>
+    <div className="min-h-screen">
       <Navbar />
       <Hero />
       <Fleet />

@@ -53,7 +53,7 @@ export default function Hero() {
         <BotanicalRight />
       </div>
 
-      <div className="relative z-10 max-w-7xl mx-auto px-8 sm:px-12 lg:px-16 pt-24 pb-8">
+      <div className="relative z-10 max-w-7xl mx-auto px-8 sm:px-12 lg:px-16 pt-20 pb-8">
         <div className="grid lg:grid-cols-2 gap-6 lg:gap-8 items-center min-h-[560px]">
           {/* Left Content */}
           <div className="pr-0 lg:pr-8 -ml-4 lg:-ml-10 px-4 sm:px-6" style={{ maxWidth: '680px' }}>
