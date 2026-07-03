@@ -57,7 +57,7 @@ export default function ForgotPassword() {
                 type="email"
                 value={email}
                 onChange={e => setEmail(e.target.value)}
-                placeholder="booking@classiccarrentals.in"
+                placeholder="bookings@classiccarrentals.in"
                 required
                 className="input-luxury"
               />

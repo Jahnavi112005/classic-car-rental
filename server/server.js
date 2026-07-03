@@ -2,6 +2,7 @@ import cors from 'cors';
 import express from 'express';
 import { connectDB } from './config/db.js';
 import { env } from './config/env.js';
+import { verifySmtpConnection } from './services/notificationService.js';
 import { errorHandler, notFound } from './middleware/errorMiddleware.js';
 import authRoutes from './routes/authRoutes.js';
 import bookingRoutes from './routes/bookingRoutes.js';
@@ -15,6 +16,11 @@ import vehicleRoutes from './routes/vehicleRoutes.js';
 import { resolveExecutable } from './services/identityVerificationService.js';
 
 await connectDB();
+
+const smtpStatus = await verifySmtpConnection();
+if (!smtpStatus.success) {
+  console.error('SMTP startup verification failed:', smtpStatus.error);
+}
 
 const app = express();
 

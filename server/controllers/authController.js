@@ -5,8 +5,6 @@ import { profileFor, sessionFor } from '../services/tokenService.js';
 import { sendEmailNotification } from '../services/notificationService.js';
 import { env } from '../config/env.js';
 
-const AUTHORIZED_EMAIL = 'booking@classiccarrentals.in';
-
 // Registration disabled for public customers. Staff users must be created via seed or owner panel.
 export const register = asyncHandler(async (req, res) => {
   res.status(404);
@@ -22,7 +20,7 @@ export const login = asyncHandler(async (req, res) => {
     throw new Error('Invalid email or password');
   }
 
-  if (user.email !== AUTHORIZED_EMAIL || user.role !== 'booking_staff') {
+  if (user.role !== 'booking_staff') {
     res.status(403);
     throw new Error('Access denied');
   }
@@ -32,6 +30,7 @@ export const login = asyncHandler(async (req, res) => {
 
 export const forgotPassword = asyncHandler(async (req, res) => {
   const email = String(req.body.email || '').trim().toLowerCase();
+  console.log('ForgotPassword received email:', email);
   if (!email) {
     return res.status(400).json({ success: false, message: 'Email is required.' });
   }

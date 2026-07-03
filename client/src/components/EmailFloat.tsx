@@ -4,7 +4,7 @@ import { X, Mail, MessageCircle } from 'lucide-react';
 
 type Props = { onInquiry?: () => void };
 
-const EMAIL = 'booking@classiccarrentals.in';
+const EMAIL = 'bookings@classiccarrentals.in';
 const SUBJECT = 'Complaint';
 const BODY = encodeURIComponent(`Hello Classic Car Rentals,
 

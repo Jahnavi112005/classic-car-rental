@@ -114,8 +114,8 @@ export default function Contact() {
                 </div>
                 <div>
                   <h4 className="font-montserrat font-semibold text-earth mb-1">Email</h4>
-                  <a href="mailto:booking@classiccarrentals.in" className="text-brown hover:text-brown-dark font-poppins text-sm transition-colors">
-                    booking@classiccarrentals.in
+                  <a href="mailto:bookings@classiccarrentals.in" className="text-brown hover:text-brown-dark font-poppins text-sm transition-colors">
+                    bookings@classiccarrentals.in
                   </a>
                 </div>
               </div>
