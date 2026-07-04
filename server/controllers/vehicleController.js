@@ -65,8 +65,19 @@ export const listVehicles = asyncHandler(async (_req, res) => {
     .map(car => ({ ...car, status: 'available' }));
 
   const combinedVehicles = [...listToClient(vehicles), ...seedVehicles];
-  res.json(combinedVehicles);
+  const uniqueVehicles = removeDuplicateVehicles(combinedVehicles);
+  res.json(uniqueVehicles);
 });
+
+function removeDuplicateVehicles(vehicles) {
+  const seen = new Set();
+  return vehicles.filter(vehicle => {
+    const key = `${vehicle.name}|${vehicle.yearRange || vehicle.year}|${vehicle.transmission}|${vehicle.fuel_type}|${vehicle.price_per_day}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
 
 export const getVehicle = asyncHandler(async (req, res) => {
   let vehicle = null;

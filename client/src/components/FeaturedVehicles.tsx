@@ -18,18 +18,35 @@ import {
 export default function FeaturedVehicles() {
   const [featuredCars, setFeaturedCars] = useState<Car[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
   useEffect(() => {
     let cancelled = false;
 
     async function loadFeaturedVehicles() {
-      const all = await vehicleApi.list();
-      if (cancelled) return;
-      const featuredCars = (all || [])
-        .filter((car) => !isVehicleDeleted(car))
-        .slice(0, 4);
-      setFeaturedCars(featuredCars);
-      setLoading(false);
+      try {
+        const all = await vehicleApi.list();
+        if (cancelled) return;
+        const pool = (all || []).filter((car) => !isVehicleDeleted(car));
+        setError('');
+        const featuredOnly = pool.filter((c) => !!c.featured);
+        const remainder = pool
+          .filter((c) => !c.featured)
+          .sort((a, b) => (b.rating || 0) - (a.rating || 0));
+
+        const featuredCars = [...featuredOnly.slice(0, 4)];
+        for (let i = featuredCars.length; i < 4 && remainder.length > 0; i += 1) {
+          featuredCars.push(remainder.shift() as Car);
+        }
+        setFeaturedCars(featuredCars);
+      } catch (err) {
+        if (cancelled) return;
+        console.error('Failed to load featured vehicles:', err);
+        setError('Unable to load featured vehicles. Please refresh the page or try again later.');
+        setFeaturedCars([]);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
     }
 
     loadFeaturedVehicles();
@@ -69,8 +86,21 @@ export default function FeaturedVehicles() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {vehiclesToRender.map((car, i) => {
             const isLoading = loading;
-            const badgeText = !isLoading ? getVehicleStatusLabel(car as Car) : 'Loading';
-            const badgeClass = !isLoading ? getVehicleBadgeClass(car as Car) : 'bg-brown-gradient text-cream';
+            const statusLabel = !isLoading ? getVehicleStatusLabel(car as Car) : 'Loading';
+            const statusBadgeClass = !isLoading ? getVehicleBadgeClass(car as Car) : 'bg-brown-gradient text-cream';
+            // Compute varied UI-only tags per vehicle to avoid repeating the same tag for all cards.
+            function computeSpecialTag(v: Car) {
+              // Prefer varied, marketing-friendly taglines — avoid the literal "Most Popular".
+              if (v.featured) return 'Top Choice';
+              if ((v.seats || 0) >= 7) return 'Family Choice';
+              if ((v.rating || 0) >= 4.8) return 'Customer Favorite';
+              if ((v.price_per_day || 0) >= 5000) return 'Top Class';
+              // For mid-range/high-value vehicles return a premium-sounding tag.
+              if ((v.price_per_day || 0) >= 3500) return 'Premium Pick';
+              return 'Best Value';
+            }
+
+            const specialTag = !isLoading ? computeSpecialTag(car as Car) : '';
             const actionClass = !isLoading ? getVehicleActionButtonClass(car as Car) : 'bg-white/10 text-[#7A7466] cursor-not-allowed';
             const actionLabel = !isLoading ? getVehicleActionButtonLabel(car as Car) : 'Loading';
             const bookable = !isLoading ? isVehicleBookable(car as Car) : false;
@@ -85,12 +115,20 @@ export default function FeaturedVehicles() {
                 whileHover={{ y: -8 }}
                 className="luxury-card overflow-hidden group relative"
               >
-                {/* Badge */}
-                <div className="absolute top-4 right-4 z-10">
-                  <span className={`font-montserrat text-xs font-bold px-3 py-1.5 rounded-full shadow-brown ${badgeClass}`}>
-                    {badgeText}
-                  </span>
-                </div>
+                {/* Badge (show status badges for Booked/Maintenance; for Available show specialTag if present) */}
+                {(!isLoading && statusLabel !== 'Available') ? (
+                  <div className="absolute top-4 right-4 z-10">
+                    <span className={`font-montserrat text-xs font-bold px-3 py-1.5 rounded-full shadow-brown ${statusBadgeClass}`}>
+                      {statusLabel}
+                    </span>
+                  </div>
+                ) : (!isLoading && statusLabel === 'Available' && specialTag) ? (
+                  <div className="absolute top-4 right-4 z-10">
+                    <span className={`font-montserrat text-xs font-bold px-3 py-1.5 rounded-full shadow-brown bg-brown text-cream`}>
+                      {specialTag}
+                    </span>
+                  </div>
+                ) : null}
 
                 {/* Image */}
                 <div className="relative h-52 overflow-hidden">

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link } from 'react-router-dom';
-import { Fuel, Settings, Users, Star, ArrowRight, Zap } from 'lucide-react';
+import { Fuel, Settings, Users, Star, ArrowRight, Zap, Search } from 'lucide-react';
 import { Car } from '../types';
 import VehicleImage from '../components/VehicleImage';
 import { whatsAppUrl } from '../utils/whatsapp';
@@ -22,16 +22,27 @@ export default function Fleet() {
   const [filtered, setFiltered] = useState<Car[]>([]);
   const [activeCategory, setActiveCategory] = useState('All');
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
   useEffect(() => {
     let cancelled = false;
     async function loadFleet() {
-      const all = await vehicleApi.list();
-      if (cancelled) return;
-      const availableCars = (all || []).filter(car => !car.isDeleted && getVehicleStatus(car) === 'available').slice(0, 8);
-      setCars(availableCars);
-      setFiltered(availableCars);
-      setLoading(false);
+      try {
+        const all = await vehicleApi.list();
+        if (cancelled) return;
+        const availableCars = (all || []).filter(car => !car.isDeleted && getVehicleStatus(car) === 'available').slice(0, 8);
+        setCars(availableCars);
+        setFiltered(availableCars);
+        setError('');
+      } catch (err) {
+        if (cancelled) return;
+        console.error('Failed to load fleet preview:', err);
+        setError('Unable to load fleet. Please refresh the page or try again later.');
+        setCars([]);
+        setFiltered([]);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
     }
     loadFleet();
     const interval = window.setInterval(loadFleet, 15000);
@@ -107,6 +118,22 @@ export default function Fleet() {
                 </div>
               </div>
             ))}
+          </div>
+        ) : error ? (
+          <div className="text-center py-24">
+            <div className="w-20 h-20 rounded-full bg-red-100 border border-red-200 flex items-center justify-center mx-auto mb-4">
+              <span className="text-red-600 text-2xl">!</span>
+            </div>
+            <h3 className="font-playfair text-2xl font-bold text-earth mb-2">Unable to load fleet</h3>
+            <p className="text-stone font-poppins">{error}</p>
+          </div>
+        ) : cars.length === 0 ? (
+          <div className="text-center py-24">
+            <div className="w-20 h-20 rounded-full bg-brown/10 border border-brown/20 flex items-center justify-center mx-auto mb-4">
+              <Search className="w-10 h-10 text-brown/40" />
+            </div>
+            <h3 className="font-playfair text-2xl font-bold text-earth mb-2">No vehicles available.</h3>
+            <p className="text-stone font-poppins">Please check back soon for the latest fleet.</p>
           </div>
         ) : (
           <AnimatePresence mode="wait">

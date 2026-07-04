@@ -19,8 +19,8 @@ const features = [
   },
   {
     icon: Car,
-    title: 'No Driver Charges',
-    description: 'Complete self-drive experience. Pay only for the car, no driver fees ever.',
+    title: 'Driver Charges Apply',
+    description: 'Driver service is available for an additional fee; the base rental covers only the car.',
   },
   {
     icon: Lock,
