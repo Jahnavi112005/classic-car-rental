@@ -13,19 +13,32 @@ export const register = asyncHandler(async (req, res) => {
 
 export const login = asyncHandler(async (req, res) => {
   const { email, password } = req.body;
+  console.log('Login request received for:', email);
+
+  if (!email || !password) {
+    return res.status(400).json({ success: false, message: 'Email and password are required.' });
+  }
+
   const user = await User.findOne({ email });
-
-  if (!user || !(await user.matchPassword(password))) {
-    res.status(401);
-    throw new Error('Invalid email or password');
+  if (!user) {
+    console.log('User not found for email:', email);
+    return res.status(401).json({ success: false, message: 'Invalid email or password.' });
   }
 
-  if (user.role !== 'booking_staff') {
-    res.status(403);
-    throw new Error('Access denied');
+  const matched = await user.matchPassword(password);
+  if (!matched) {
+    console.log('Password did not match for:', email);
+    return res.status(401).json({ success: false, message: 'Invalid email or password.' });
   }
 
-  res.json({ session: sessionFor(user), profile: profileFor(user) });
+  console.log('Password matched for:', email);
+
+  if (user.role !== 'booking_staff' && user.role !== 'owner') {
+    console.log('Unauthorized role for login attempt:', user.role);
+    return res.status(403).json({ success: false, message: 'Access denied for this account.' });
+  }
+
+  return res.json({ session: sessionFor(user), profile: profileFor(user) });
 });
 
 export const forgotPassword = asyncHandler(async (req, res) => {

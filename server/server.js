@@ -1,8 +1,13 @@
+import dns from 'node:dns';
+
+// Force Node.js to use Google DNS instead of localhost (127.0.0.1)
+dns.setServers(['8.8.8.8', '8.8.4.4']);
 import cors from 'cors';
 import express from 'express';
 import { connectDB } from './config/db.js';
 import { env } from './config/env.js';
 import { verifySmtpConnection } from './services/notificationService.js';
+import { seedIfNeeded } from './services/seedService.js';
 import { errorHandler, notFound } from './middleware/errorMiddleware.js';
 import authRoutes from './routes/authRoutes.js';
 import bookingRoutes from './routes/bookingRoutes.js';
@@ -20,6 +25,13 @@ await connectDB();
 const smtpStatus = await verifySmtpConnection();
 if (!smtpStatus.success) {
   console.error('SMTP startup verification failed:', smtpStatus.error);
+}
+
+// Seed default admin and required collections if needed
+try {
+  await seedIfNeeded();
+} catch (err) {
+  console.error('Automatic seeding failed:', err.message || err);
 }
 
 const app = express();
