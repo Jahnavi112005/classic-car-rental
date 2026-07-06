@@ -15,7 +15,7 @@ npm install
 npm run dev
 ```
 
-The frontend uses `VITE_API_BASE_URL` from `client/.env` and defaults to `http://localhost:5000/api`.
+The frontend uses `VITE_API_BASE_URL` from `client/.env`.
 
 ## Server
 
@@ -25,13 +25,19 @@ npm install
 npm run dev
 ```
 
-The backend uses MongoDB through Mongoose. Configure `server/.env`:
+The backend uses MongoDB through Mongoose. Configure `server/.env` or copy `server/.env.example` and set production values.
 
 ```env
 PORT=5000
-MONGO_URI=mongodb://127.0.0.1:27017/classic-car-rental
-JWT_SECRET=change-this-secret-in-production
-CLIENT_URL=http://localhost:5173
+MONGO_URI=mongodb+srv://<user>:<password>@cluster0.mongodb.net/<dbname>?retryWrites=true&w=majority
+JWT_SECRET=<strong-secret>
+CLIENT_URL=https://your-frontend-url.vercel.app
+SMTP_HOST=<smtp-host>
+SMTP_PORT=<smtp-port>
+SMTP_SECURE=true
+SMTP_USER=<smtp-user>
+SMTP_PASS=<smtp-pass>
+FROM_EMAIL=<from-email>
 ```
 
 ## Run Both

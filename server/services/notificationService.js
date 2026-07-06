@@ -11,13 +11,15 @@ function logSmtpEnvStatus() {
     FROM_EMAIL: !!env.fromEmail,
   };
 
-  console.log('SMTP environment variable status:');
-  console.log(`  SMTP_HOST: ${status.SMTP_HOST ? 'Loaded ✓' : 'Missing ✗'}`);
-  console.log(`  SMTP_PORT: ${status.SMTP_PORT ? 'Loaded ✓' : 'Missing ✗'}`);
-  console.log(`  SMTP_SECURE: ${status.SMTP_SECURE ? 'Loaded ✓' : 'Missing ✗'}`);
-  console.log(`  SMTP_USER: ${status.SMTP_USER ? 'Loaded ✓' : 'Missing ✗'}`);
-  console.log(`  SMTP_PASS: ${status.SMTP_PASS ? 'Loaded ✓' : 'Missing ✗'}`);
-  console.log(`  FROM_EMAIL: ${status.FROM_EMAIL ? 'Loaded ✓' : 'Missing ✗'}`);
+  if (env.nodeEnv !== 'production') {
+    console.log('SMTP environment variable status:');
+    console.log(`  SMTP_HOST: ${status.SMTP_HOST ? 'Loaded ✓' : 'Missing ✗'}`);
+    console.log(`  SMTP_PORT: ${status.SMTP_PORT ? 'Loaded ✓' : 'Missing ✗'}`);
+    console.log(`  SMTP_SECURE: ${status.SMTP_SECURE ? 'Loaded ✓' : 'Missing ✗'}`);
+    console.log(`  SMTP_USER: ${status.SMTP_USER ? 'Loaded ✓' : 'Missing ✗'}`);
+    console.log(`  SMTP_PASS: ${status.SMTP_PASS ? 'Loaded ✓' : 'Missing ✗'}`);
+    console.log(`  FROM_EMAIL: ${status.FROM_EMAIL ? 'Loaded ✓' : 'Missing ✗'}`);
+  }
 
   return status;
 }
@@ -35,7 +37,7 @@ function createTransporter() {
     throw new Error(`SMTP configuration incomplete: missing ${missing.join(', ')}`);
   }
 
-  console.log('Creating SMTP transporter using host:', env.smtpHost);
+  if (env.nodeEnv !== 'production') console.log('Creating SMTP transporter using host:', env.smtpHost);
   return nodemailer.createTransport({
     host: env.smtpHost,
     port: env.smtpPort,
@@ -60,7 +62,7 @@ export async function verifySmtpConnection() {
 
   try {
     await transporter.verify();
-    console.log('✓ SMTP connection successful');
+    if (env.nodeEnv !== 'production') console.log('✓ SMTP connection successful');
     return { success: true };
   } catch (error) {
     console.error('SMTP verification failed:', error?.message || error);
@@ -79,12 +81,14 @@ export async function sendEmailNotification(to, subject, body) {
       text: body,
     });
 
-    console.log('Email sent successfully:', {
-      messageId: info.messageId,
-      recipient: to,
-      smtpHost: env.smtpHost,
-    });
-    console.log('Email body includes reset link:', body.includes('/reset-password/') ? 'yes' : 'no');
+    if (env.nodeEnv !== 'production') {
+      console.log('Email sent successfully:', {
+        messageId: info.messageId,
+        recipient: to,
+        smtpHost: env.smtpHost,
+      });
+      console.log('Email body includes reset link:', body.includes('/reset-password/') ? 'yes' : 'no');
+    }
 
     return info;
   } catch (error) {

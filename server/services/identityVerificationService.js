@@ -315,19 +315,19 @@ function namesMatch(customerName, ocrName) {
 
   if (!customerTokens.length || !ocrTokens.length) {
     logDetails.similarityScore = 0;
-    console.log('[OCR][Name Match]', JSON.stringify(logDetails));
+    if (process.env.NODE_ENV !== 'production') console.log('[OCR][Name Match]', JSON.stringify(logDetails));
     return { matched: false, score: 0, reason: 'Name mismatch' };
   }
 
   if (customerNormalized && ocrNormalized && customerNormalized === ocrNormalized) {
     logDetails.similarityScore = 100;
-    console.log('[OCR][Name Match]', JSON.stringify(logDetails));
+    if (process.env.NODE_ENV !== 'production') console.log('[OCR][Name Match]', JSON.stringify(logDetails));
     return { matched: true, score: 100, reason: null };
   }
 
   const score = similarityScore(customerName, ocrName);
   logDetails.similarityScore = Number(score.toFixed(2));
-  console.log('[OCR][Name Match]', JSON.stringify(logDetails));
+  if (process.env.NODE_ENV !== 'production') console.log('[OCR][Name Match]', JSON.stringify(logDetails));
 
   if (score >= 90) {
     return { matched: true, score, reason: null };
@@ -341,10 +341,11 @@ function cleanIdentifier(value = '') {
 }
 
 function logStage(stage, details) {
-  console.log(`[OCR][${stage}]`, JSON.stringify(details));
+  if (process.env.NODE_ENV !== 'production') console.log(`[OCR][${stage}]`, JSON.stringify(details));
 }
 
 function logDebugSection(title, details) {
+  if (process.env.NODE_ENV === 'production') return;
   const separator = '================================';
   const entries = [separator, title, separator];
   for (const [key, value] of Object.entries(details)) {
@@ -819,8 +820,10 @@ function getAadhaarNameCandidates(lines = [], baseLineIndex = 0) {
     }
   });
 
-  console.log('[OCR][Accepted Name Candidates]', JSON.stringify(uniqueCandidates));
-  console.log('[OCR][Rejected Name Candidates]', JSON.stringify(rejectedCandidates));
+  if (process.env.NODE_ENV !== 'production') {
+    console.log('[OCR][Accepted Name Candidates]', JSON.stringify(uniqueCandidates));
+    console.log('[OCR][Rejected Name Candidates]', JSON.stringify(rejectedCandidates));
+  }
   return uniqueCandidates;
 }
 
@@ -885,8 +888,10 @@ function extractAadhaarDocumentNumber(text, preferredNameLineIndex = -1, holderB
     label: candidate.label,
   }));
 
-  console.log('[OCR][Aadhaar Number Candidates]', JSON.stringify(allCandidates));
-  console.log('[OCR][Aadhaar Rejected Candidates]', JSON.stringify(rejected));
+  if (process.env.NODE_ENV !== 'production') {
+    console.log('[OCR][Aadhaar Number Candidates]', JSON.stringify(allCandidates));
+    console.log('[OCR][Aadhaar Rejected Candidates]', JSON.stringify(rejected));
+  }
 
   if (!candidates.length) return { value: null, candidates: [], rejected };
 
@@ -911,7 +916,7 @@ function parseAadhaarFields(text) {
   const holderBlock = getAadhaarHolderBlock(mergedOcrLines);
   const ignoredRelationshipLines = rawLines.filter(line => isRelationshipLabelLine(line));
   const allOcrLinesWithIndexes = mergedOcrLines.map((line, index) => ({ index, line }));
-  console.log('[OCR][All OCR Lines with Indexes]', JSON.stringify(allOcrLinesWithIndexes));
+  if (process.env.NODE_ENV !== 'production') console.log('[OCR][All OCR Lines with Indexes]', JSON.stringify(allOcrLinesWithIndexes));
   const nameCandidates = getAadhaarNameCandidates(mergedOcrLines, 0);
   const selectedNameCandidate = nameCandidates.sort((left, right) => (right.score || 0) - (left.score || 0))[0] || null;
   const selectedName = selectedNameCandidate?.value || null;
@@ -931,39 +936,41 @@ function parseAadhaarFields(text) {
     source: candidate.source,
   }));
 
-  console.log('[OCR][Merged Aadhaar OCR Lines]', JSON.stringify(mergedOcrLines));
-  console.log('[OCR][Final Merged Holder Block]', JSON.stringify(holderBlock.lines));
-  console.log('[OCR][Final Selected Name]', selectedName || '(none)');
-  console.log('[OCR][Selected Aadhaar Number]', documentNumber || '(none)');
-  console.log('Candidate Name:Score:Reason:Selected Name:Selected Aadhaar:All Aadhaar candidates:All rejected candidates:');
-  console.log(JSON.stringify({
-    candidateNames: nameCandidateDetails,
-    selectedName,
-    selectedAadhaar: documentNumber,
-    allAadhaarCandidates: aadhaarSelection.candidates,
-    allRejectedCandidates: aadhaarSelection.rejected,
-  }));
-  console.log('[OCR][Aadhaar Parser Ignored Relationship Lines]', JSON.stringify(ignoredRelationshipLines));
-  console.log('[OCR][Aadhaar Parser Final Selected Holder Name]', JSON.stringify({
-    selectedName,
-    selectedReason,
-    selectedNameLineIndex: selectedNameCandidate?.lineIndex ?? null,
-  }));
-  console.log('[OCR][Aadhaar Parser]', JSON.stringify({
-    selectedName,
-    selectedAadhaarNumber: documentNumber,
-    selectedReason,
-    candidateNames: nameCandidateDetails,
-    ignoredRelationshipLines,
-    candidateAadhaarNumbers: aadhaarSelection.candidates,
-    selectedAadhaarCandidate: aadhaarSelection.selectedCandidate ? {
-      value: aadhaarSelection.selectedCandidate.value,
-      lineIndex: aadhaarSelection.selectedCandidate.lineIndex,
-      score: aadhaarSelection.selectedCandidate.score,
-      reason: aadhaarSelection.selectedCandidate.reason,
-      source: aadhaarSelection.selectedCandidate.source,
-    } : null,
-  }));
+  if (process.env.NODE_ENV !== 'production') {
+    console.log('[OCR][Merged Aadhaar OCR Lines]', JSON.stringify(mergedOcrLines));
+    console.log('[OCR][Final Merged Holder Block]', JSON.stringify(holderBlock.lines));
+    console.log('[OCR][Final Selected Name]', selectedName || '(none)');
+    console.log('[OCR][Selected Aadhaar Number]', documentNumber || '(none)');
+    console.log('Candidate Name:Score:Reason:Selected Name:Selected Aadhaar:All Aadhaar candidates:All rejected candidates:');
+    console.log(JSON.stringify({
+      candidateNames: nameCandidateDetails,
+      selectedName,
+      selectedAadhaar: documentNumber,
+      allAadhaarCandidates: aadhaarSelection.candidates,
+      allRejectedCandidates: aadhaarSelection.rejected,
+    }));
+    console.log('[OCR][Aadhaar Parser Ignored Relationship Lines]', JSON.stringify(ignoredRelationshipLines));
+    console.log('[OCR][Aadhaar Parser Final Selected Holder Name]', JSON.stringify({
+      selectedName,
+      selectedReason,
+      selectedNameLineIndex: selectedNameCandidate?.lineIndex ?? null,
+    }));
+    console.log('[OCR][Aadhaar Parser]', JSON.stringify({
+      selectedName,
+      selectedAadhaarNumber: documentNumber,
+      selectedReason,
+      candidateNames: nameCandidateDetails,
+      ignoredRelationshipLines,
+      candidateAadhaarNumbers: aadhaarSelection.candidates,
+      selectedAadhaarCandidate: aadhaarSelection.selectedCandidate ? {
+        value: aadhaarSelection.selectedCandidate.value,
+        lineIndex: aadhaarSelection.selectedCandidate.lineIndex,
+        score: aadhaarSelection.selectedCandidate.score,
+        reason: aadhaarSelection.selectedCandidate.reason,
+        source: aadhaarSelection.selectedCandidate.source,
+      } : null,
+    }));
+  }
 
   return {
     fullName: selectedName,
