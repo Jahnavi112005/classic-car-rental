@@ -34,8 +34,11 @@ await connectDB();
 
 const smtpStatus = await verifySmtpConnection();
 if (!smtpStatus.success) {
-  console.error('SMTP startup verification failed:', smtpStatus.error);
-  process.exit(1);
+  console.warn(
+    'SMTP verification failed. Email features will be unavailable until SMTP is reachable.'
+  );
+} else {
+  console.log('SMTP connection successful');
 }
 
 // Seed default admin and required collections if needed
