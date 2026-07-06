@@ -10,7 +10,11 @@ type CustomerPayload = {
   country?: string;
 };
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+
+if (!API_BASE_URL) {
+  throw new Error('VITE_API_BASE_URL must be defined in the client environment for production deployment.');
+}
 const TOKEN_KEY = 'classic_car_token';
 
 export const api = axios.create({
