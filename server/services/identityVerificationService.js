@@ -460,11 +460,17 @@ function resolveExecutable(commandName, envVarName) {
     }
   }
 
-  if (commandName === 'pdftoppm') {
-    throw new Error('Poppler (pdftoppm.exe) was not found.');
-  }
-
   return null;
+}
+
+export function getOcrStatus() {
+  const tesseractPath = resolveExecutable('tesseract', 'TESSERACT_PATH');
+  const pdftoppmPath = resolveExecutable('pdftoppm', 'PDFTOPPM_PATH');
+  return {
+    ocrAvailable: Boolean(tesseractPath && pdftoppmPath),
+    tesseractPath,
+    pdftoppmPath,
+  };
 }
 
 function countryMatches(customerCountry, ocrNationality) {
@@ -1173,6 +1179,16 @@ async function extractTextWithPdfParse(filePath) {
 
 async function convertPdfToImages(filePath) {
   const pdftoppmPath = resolveExecutable('pdftoppm', 'PDFTOPPM_PATH');
+  if (!pdftoppmPath) {
+    return {
+      ok: false,
+      reason: 'OCR extraction failed because Poppler executable was not found.',
+      tempDir: null,
+      imagePaths: [],
+      poppler: { command: null, exitCode: null, stderr: null, stdout: null },
+    };
+  }
+
   const diagnostics = await getFileDiagnostics(filePath);
   const uploadSection = {
     'Original filename': path.basename(filePath),

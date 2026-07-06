@@ -1,8 +1,4 @@
 // Note: Removed DNS override used for local debugging.
-import dns from 'node:dns';
-
-dns.setServers(['8.8.8.8', '8.8.4.4']);
-
 import cors from 'cors';
 import express from 'express';
 import helmet from 'helmet';
@@ -21,7 +17,7 @@ import debugRoutes from './routes/debugRoutes.js';
 import reviewRoutes from './routes/reviewRoutes.js';
 import userRoutes from './routes/userRoutes.js';
 import vehicleRoutes from './routes/vehicleRoutes.js';
-import { resolveExecutable } from './services/identityVerificationService.js';
+import { getOcrStatus } from './services/identityVerificationService.js';
 
 if (process.env.NODE_ENV === 'production') {
   if (!env.clientUrl) {
@@ -98,16 +94,21 @@ app.use('/api/notifications', placeholderRoutes);
 app.use('/api/branches', placeholderRoutes);
 app.use('/api/admins', placeholderRoutes);
 
-try {
-  const resolvedTesseract = resolveExecutable('tesseract', 'TESSERACT_PATH');
-  const resolvedPoppler = resolveExecutable('pdftoppm', 'PDFTOPPM_PATH');
-  if (process.env.NODE_ENV !== 'production') {
-    console.log('Resolved Tesseract:', resolvedTesseract);
-    console.log('Resolved Poppler:', resolvedPoppler);
+const { ocrAvailable, tesseractPath, pdftoppmPath } = getOcrStatus();
+
+if (!ocrAvailable) {
+  console.warn('OCR binaries are not fully available. OCR features will be disabled.');
+  if (!tesseractPath) {
+    console.warn('Tesseract executable not found. Set TESSERACT_PATH if available.');
   }
-} catch (error) {
-  console.error('Executable resolution failed:', error.message);
-  process.exit(1);
+  if (!pdftoppmPath) {
+    console.warn('Poppler executable not found. Set PDFTOPPM_PATH if available.');
+  }
+}
+
+if (process.env.NODE_ENV !== 'production') {
+  console.log('Resolved Tesseract:', tesseractPath);
+  console.log('Resolved Poppler:', pdftoppmPath);
 }
 
 app.use(notFound);
