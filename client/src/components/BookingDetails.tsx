@@ -115,27 +115,18 @@ export default function BookingDetails({ id, onClose }: Props) {
               <div className="text-xs text-stone">No document uploaded</div>
             )}
 
-            <div className="text-sm font-semibold mt-4 mb-2">OCR Extracted Data</div>
-            <div className="text-xs bg-gray-50 p-3 rounded h-40 overflow-auto">{JSON.stringify(doc?.ocr || {}, null, 2)}</div>
-
-            <div className="text-sm font-semibold mt-4 mb-2">OCR Comparison</div>
-            <div className="space-y-2 text-xs">
-              {['name', 'dob', 'address', 'document_number'].map(k => {
-                const custRec = customer as Record<string, string>;
-                const custVal = custRec[k] || '';
-                const ocrRec = (doc?.ocr || {}) as Record<string, unknown>;
-                const ocrVal = String(ocrRec[k] || '');
-                const cmp = compareField(custVal, ocrVal);
-                const confidence = typeof ocrRec['confidence'] === 'number' ? (ocrRec['confidence'] as number) : 0;
-                return (
-                  <div key={k} className="flex justify-between items-start gap-4">
-                    <div className="w-1/3"><strong>{k}</strong><div className="text-stone">Customer: {custVal}</div></div>
-                    <div className="w-1/3"><div className="text-stone">OCR: {ocrVal}</div><div className="text-xs text-stone">Confidence: {Math.round(confidence * 100)}%</div></div>
-                    <div className="w-1/3">{cmp.result === 'match' ? '✔ Match' : cmp.result === 'partial' ? '➖ Partial' : cmp.result === 'mismatch' ? '❌ Mismatch' : '—'}</div>
-                  </div>
-                );
-              })}
-            </div>
+            <div className="text-sm font-semibold mt-4 mb-2">Uploaded Document</div>
+            {doc ? (
+              <div className="space-y-2">
+                <div className="text-xs text-stone">{doc.originalName || doc.fileUrl.split('/').pop()}</div>
+                <div className="flex items-center gap-2 mt-2">
+                  <a href={doc.fileUrl} target="_blank" rel="noreferrer" className="btn-outline-gold">View Document</a>
+                  <a href={doc.fileUrl} download={doc.originalName || ''} className="btn-gold">Download Document</a>
+                </div>
+              </div>
+            ) : (
+              <div className="text-xs text-stone">No document uploaded</div>
+            )}
 
             <div className="text-sm font-semibold mt-4 mb-2">Timeline</div>
             <div className="text-xs bg-gray-50 p-3 rounded h-40 overflow-auto">

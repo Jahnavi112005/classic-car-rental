@@ -7,6 +7,7 @@ import VehicleImage from '../components/VehicleImage';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import WhatsAppFloat from '../components/WhatsAppFloat';
+import EmailFloat from '../components/EmailFloat';
 import BranchPopup from '../components/BranchPopup';
 import { whatsAppUrl } from '../utils/whatsapp';
 import { vehicleApi } from '../services/api';
@@ -20,6 +21,7 @@ export default function FleetPage() {
   const [cars, setCars] = useState<Car[]>([]);
   const [filtered, setFiltered] = useState<Car[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState(searchParams.get('category') || 'All');
   const [fuel, setFuel] = useState('All');
@@ -30,12 +32,24 @@ export default function FleetPage() {
 
   useEffect(() => {
     let cancelled = false;
+
     async function loadFleet() {
-      const list = await vehicleApi.list();
-      if (cancelled) return;
-      setCars((list || []).filter(car => !car.isDeleted));
-      setLoading(false);
+      try {
+        const list = await vehicleApi.list();
+        if (cancelled) return;
+        setCars((list || []).filter(car => !car.isDeleted));
+        setError('');
+      } catch (err) {
+        if (cancelled) return;
+        console.error('Failed to load fleet:', err);
+        setError('Unable to load vehicles. Please refresh the page or try again later.');
+        setCars([]);
+        setFiltered([]);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
     }
+
     loadFleet();
     const interval = window.setInterval(loadFleet, 15000);
     return () => {
@@ -190,6 +204,22 @@ export default function FleetPage() {
               </div>
             ))}
           </div>
+        ) : error ? (
+          <div className="text-center py-24">
+            <div className="w-20 h-20 rounded-full bg-red-100 border border-red-200 flex items-center justify-center mx-auto mb-4">
+              <span className="text-red-600 text-2xl">!</span>
+            </div>
+            <h3 className="font-playfair text-2xl font-bold text-earth mb-2">Unable to load vehicles</h3>
+            <p className="text-stone font-poppins">{error}</p>
+          </div>
+        ) : cars.length === 0 ? (
+          <div className="text-center py-24">
+            <div className="w-20 h-20 rounded-full bg-brown/10 border border-brown/20 flex items-center justify-center mx-auto mb-4">
+              <Search className="w-10 h-10 text-brown/40" />
+            </div>
+            <h3 className="font-playfair text-2xl font-bold text-earth mb-2">No vehicles available.</h3>
+            <p className="text-stone font-poppins">Please check back later or try another search.</p>
+          </div>
         ) : filtered.length === 0 ? (
           <div className="text-center py-24">
             <div className="w-20 h-20 rounded-full bg-brown/10 border border-brown/20 flex items-center justify-center mx-auto mb-4">
@@ -209,6 +239,7 @@ export default function FleetPage() {
 
       <Footer onBranchClick={() => setBranchOpen(true)} />
       <WhatsAppFloat />
+      <EmailFloat />
       <BranchPopup open={branchOpen} onClose={() => setBranchOpen(false)} />
     </div>
   );

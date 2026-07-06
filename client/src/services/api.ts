@@ -41,6 +41,14 @@ export const authApi = {
     saveToken(data.session.token);
     return data;
   },
+  async forgotPassword(payload: { email: string }) {
+    const { data } = await api.post('/auth/forgot-password', payload);
+    return data;
+  },
+  async resetPassword(token: string, payload: { password: string; confirmPassword: string }) {
+    const { data } = await api.post(`/auth/reset-password/${token}`, payload);
+    return data;
+  },
   logout() {
     clearToken();
   },

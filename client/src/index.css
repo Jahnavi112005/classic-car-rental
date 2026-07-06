@@ -140,9 +140,10 @@
     position: relative;
     background: radial-gradient(circle at 50% 14%, rgba(255, 250, 243, 1) 0%, rgba(251, 241, 227, 0.9) 30%, rgba(238, 221, 193, 0.98) 58%, rgba(222, 196, 159, 1) 100%);
     display: flex;
-    align-items: center;
+    align-items: flex-end;
     justify-content: center;
     overflow: hidden;
+    padding-top: 11%;
   }
 
   .vehicle-image-panel::before {
@@ -167,12 +168,12 @@
   .vehicle-image-panel__image {
     position: relative;
     z-index: 1;
-    width: auto;
-    height: auto;
-    max-width: 95%;
-    max-height: 95%;
+    width: 100%;
+    height: 100%;
+    max-width: 88%;
+    max-height: 82%;
     object-fit: contain;
-    object-position: center;
+    object-position: bottom center;
     transition: transform 0.3s ease, filter 0.3s ease;
   }
 

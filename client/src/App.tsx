@@ -5,8 +5,8 @@ import FleetPage from './pages/FleetPage';
 import CarDetail from './pages/CarDetail';
 import BookingPage from './pages/BookingPage';
 import Login from './pages/Login';
-import Register from './pages/Register';
-import OwnerDashboard from './pages/OwnerDashboard';
+import ForgotPassword from './pages/ForgotPassword';
+import ResetPassword from './pages/ResetPassword';
 import BookingDashboard from './pages/BookingDashboard';
 
 function PageWrapper({ children }: { children: React.ReactNode }) {
@@ -30,10 +30,10 @@ export default function App() {
         <Route path="/fleet" element={<PageWrapper><FleetPage /></PageWrapper>} />
         <Route path="/fleet/:id" element={<PageWrapper><CarDetail /></PageWrapper>} />
         <Route path="/login" element={<PageWrapper><Login /></PageWrapper>} />
-        <Route path="/register" element={<PageWrapper><Register /></PageWrapper>} />
+        <Route path="/forgot-password" element={<PageWrapper><ForgotPassword /></PageWrapper>} />
+        <Route path="/reset-password/:token" element={<PageWrapper><ResetPassword /></PageWrapper>} />
         <Route path="/booking" element={<PageWrapper><BookingPage /></PageWrapper>} />
         <Route path="/booking/dashboard" element={<PageWrapper><BookingDashboard /></PageWrapper>} />
-        <Route path="/owner/dashboard" element={<PageWrapper><OwnerDashboard /></PageWrapper>} />
         <Route path="*" element={<PageWrapper><NotFound /></PageWrapper>} />
       </Routes>
     </AnimatePresence>

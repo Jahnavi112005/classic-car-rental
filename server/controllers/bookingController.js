@@ -9,7 +9,6 @@ import { profileFor } from '../services/tokenService.js';
 import Customer from '../models/Customer.js';
 import notificationService from '../services/notificationService.js';
 import AuditLog from '../models/AuditLog.js';
-import { parseIdentityFields, verifyIdentity } from '../services/identityVerificationService.js';
 
 function normalizeBooking(booking) {
   const obj = toClient(booking);
@@ -255,28 +254,12 @@ export const getAuditLogs = asyncHandler(async (req, res) => {
 export const createBooking = asyncHandler(async (req, res) => {
   const carId = await resolveVehicleId(req.body.car_id);
 
+  // If a document id is provided, ensure it exists. OCR/verification is bypassed.
   if (req.body.document) {
     const document = await Document.findById(req.body.document);
     if (!document) {
       res.status(400);
       throw new Error('Document not found.');
-    }
-
-    const parsedFields = parseIdentityFields(document.type, document.ocr?.raw || '');
-    const verification = verifyIdentity(
-      {
-        documentType: document.type,
-        fullName: req.body.customer?.name || req.body.fullName || '',
-        documentNumber: req.body.customer?.documentNumber || req.body.documentNumber || '',
-        country: req.body.customer?.country || req.body.country || '',
-      },
-      parsedFields,
-      document.ocr?.raw || ''
-    );
-
-    if (!verification.passed) {
-      res.status(400);
-      throw new Error(verification.message);
     }
   }
 
@@ -316,8 +299,14 @@ export const createBooking = asyncHandler(async (req, res) => {
   // link document if provided
   if (req.body.document) {
     try {
-      await Document.findByIdAndUpdate(req.body.document, { booking: booking._id, bookingReference: booking._id });
+      const document = await Document.findByIdAndUpdate(req.body.document, { booking: booking._id, bookingReference: booking._id }, { new: true });
       booking.documents = [req.body.document];
+      if (document) {
+        booking.documentUrl = document.fileUrl || '';
+        booking.documentOriginalName = document.originalName || document.originalImageUrl || '';
+        booking.documentMimeType = document.mimeType || '';
+        booking.documentSize = document.size || 0;
+      }
       await booking.save();
     } catch (err) {
       // ignore document linking errors
@@ -379,8 +368,14 @@ export const createGuestBooking = asyncHandler(async (req, res) => {
 
   if (req.body.document) {
     try {
-      await Document.findByIdAndUpdate(req.body.document, { booking: booking._id, bookingReference: booking._id, user: customer._id });
+      const document = await Document.findByIdAndUpdate(req.body.document, { booking: booking._id, bookingReference: booking._id, user: customer._id }, { new: true });
       booking.documents = [req.body.document];
+      if (document) {
+        booking.documentUrl = document.fileUrl || '';
+        booking.documentOriginalName = document.originalName || document.originalImageUrl || '';
+        booking.documentMimeType = document.mimeType || '';
+        booking.documentSize = document.size || 0;
+      }
       await booking.save();
     } catch (err) {
       console.warn('Failed to link document to booking', err.message || err);

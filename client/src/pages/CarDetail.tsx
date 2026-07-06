@@ -10,6 +10,7 @@ import { useAuth } from '../context/AuthContext';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import WhatsAppFloat from '../components/WhatsAppFloat';
+import EmailFloat from '../components/EmailFloat';
 import { whatsAppUrl } from '../utils/whatsapp';
 
 type IdentityDocumentType = 'driving_license' | 'aadhaar' | 'passport' | 'pan' | '';
@@ -42,6 +43,8 @@ export default function CarDetail() {
     dropDate: tomorrow,
     pickupTime: '10:00',
     dropTime: '10:00',
+    phone: '',
+    whatsappNumber: '',
     notes: '',
   });
 
@@ -72,6 +75,14 @@ export default function CarDetail() {
   async function handleBook() {
     if (!bookForm.pickupLocation) {
       setBookError('Please enter pickup location.');
+      return;
+    }
+    if (!bookForm.phone.trim()) {
+      setBookError('Please provide your phone number.');
+      return;
+    }
+    if (!bookForm.whatsappNumber.trim()) {
+      setBookError('Please provide your WhatsApp number.');
       return;
     }
     if (!documentForm.fullName.trim() || !documentForm.documentNumber.trim() || !documentForm.documentType || !documentForm.country.trim() || !documentForm.governmentId) {
@@ -119,7 +130,8 @@ export default function CarDetail() {
         customer: {
           name: documentForm.fullName,
           email: user?.email || '',
-          phone: '',
+          phone: bookForm.phone,
+          whatsapp: bookForm.whatsappNumber,
           address: bookForm.pickupLocation,
           documentNumber: documentForm.documentNumber,
           country: documentForm.country,
@@ -339,6 +351,32 @@ export default function CarDetail() {
                           <input type="date" value={bookForm.dropDate} min={bookForm.pickupDate} onChange={e => setBookForm(p => ({ ...p, dropDate: e.target.value }))} className="input-luxury" />
                         </div>
                       </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-xs font-montserrat font-semibold text-brown uppercase tracking-wider mb-2">
+                            <Phone className="w-3 h-3 inline mr-1" />Phone Number
+                          </label>
+                          <input
+                            type="tel"
+                            value={bookForm.phone}
+                            onChange={e => setBookForm(p => ({ ...p, phone: e.target.value }))}
+                            placeholder="+91 98765 43210"
+                            className="input-luxury"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-montserrat font-semibold text-brown uppercase tracking-wider mb-2">
+                            <Phone className="w-3 h-3 inline mr-1" />WhatsApp Number
+                          </label>
+                          <input
+                            type="tel"
+                            value={bookForm.whatsappNumber}
+                            onChange={e => setBookForm(p => ({ ...p, whatsappNumber: e.target.value }))}
+                            placeholder="+91 98765 43210"
+                            className="input-luxury"
+                          />
+                        </div>
+                      </div>
                     </div>
 
                     <div className="space-y-4 mb-6 border-t border-brown/10 pt-6">
@@ -427,6 +465,12 @@ export default function CarDetail() {
                           <p>10 MB</p>
                           <p className="font-semibold text-[#7B4A1E] mt-2 mb-1">Upload Guidance:</p>
                           <p>Make sure the entire document is visible, with no blur, no flash reflection, all four corners visible, and upload the original document.</p>
+                          <div className="mt-4 rounded-2xl border border-brown/20 bg-brown/5 px-4 py-4 text-sm text-earth">
+                            <p className="font-semibold text-brown mb-2">Need help with your booking?</p>
+                            <p className="mb-1">Phone: <a href="tel:9036444477" className="text-brown hover:underline">+91 90364 44477</a></p>
+                            <p className="mb-1">WhatsApp: <a href="https://wa.me/919036444477" target="_blank" rel="noopener noreferrer" className="text-brown hover:underline">+91 90364 44477</a></p>
+                            <p className="text-xs text-stone">Message us on WhatsApp for faster support and booking assistance.</p>
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -489,6 +533,7 @@ export default function CarDetail() {
       </div>
       <Footer />
       <WhatsAppFloat />
+      <EmailFloat />
     </div>
   );
 }

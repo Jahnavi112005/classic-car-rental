@@ -9,7 +9,7 @@ async function seedAdminUsers() {
   await mongoose.connect(env.mongoUri, { autoIndex: true });
 
     const ownerEmail = 'owner@classiccarrentals.in';
-    const bookingEmail = 'booking@classiccarrentals.in';
+    const bookingEmail = 'bookings@classiccarrentals.in';
 
     const ownerPassword = process.env.OWNER_PASSWORD || 'OwnerPass123!';
     const bookingPassword = process.env.BOOKING_PASSWORD || 'BookingPass123!';
@@ -37,9 +37,10 @@ async function seedAdminUsers() {
     if (bookingStaff) {
       bookingStaff.name = 'Booking Staff';
       bookingStaff.role = 'booking_staff';
+      bookingStaff.email = bookingEmail;
       bookingStaff.password = bookingPassword;
       await bookingStaff.save();
-      console.log(`Updated Booking Staff account password: ${bookingEmail}`);
+      console.log(`Updated Booking Staff account password and email: ${bookingEmail}`);
     } else {
       await User.create({
         name: 'Booking Staff',

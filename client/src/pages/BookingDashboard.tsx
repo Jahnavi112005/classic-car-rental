@@ -91,15 +91,21 @@ export default function BookingDashboard() {
 
   async function fetchData(showLoading = true) {
     if (showLoading) setLoading(true);
-    const [bookingList, vehicleList] = await Promise.all([bookingApi.list(), vehicleApi.list()]);
-    setBookings(bookingList || []);
-    const activeVehicles = (vehicleList || []).filter(v => !v.isDeleted);
-    setVehicles(activeVehicles);
-    setFleetStatusChanges(activeVehicles.reduce((acc, vehicle) => ({
-      ...acc,
-      [String(vehicle.id)]: vehicle.status || 'available',
-    }), {}));
-    if (showLoading) setLoading(false);
+    try {
+      const [bookingList, vehicleList] = await Promise.all([bookingApi.list(), vehicleApi.list()]);
+      setBookings(bookingList || []);
+      const activeVehicles = (vehicleList || []).filter(v => !v.isDeleted);
+      setVehicles(activeVehicles);
+      setFleetStatusChanges(activeVehicles.reduce((acc, vehicle) => ({
+        ...acc,
+        [String(vehicle.id)]: vehicle.status || 'available',
+      }), {}));
+    } catch (err) {
+      console.error('Failed to load booking dashboard data:', err);
+      setToast({ type: 'error', message: 'Unable to load dashboard data. Please try again later.' });
+    } finally {
+      if (showLoading) setLoading(false);
+    }
   }
 
   const counts = useMemo(() => ({

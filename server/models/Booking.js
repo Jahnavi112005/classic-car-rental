@@ -29,6 +29,10 @@ const bookingSchema = new mongoose.Schema(
       },
     ],
     documents: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Document' }],
+    documentUrl: { type: String, default: '' },
+    documentOriginalName: { type: String, default: '' },
+    documentMimeType: { type: String, default: '' },
+    documentSize: { type: Number, default: 0 },
     verification_status: { type: String, enum: ['pending', 'partial', 'verified'], default: 'pending' },
     timeline: [
       {

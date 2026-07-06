@@ -1,11 +1,19 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link } from 'react-router-dom';
-import { Fuel, Settings, Users, Star, ArrowRight, Zap } from 'lucide-react';
+import { Fuel, Settings, Users, Star, ArrowRight, Zap, Search } from 'lucide-react';
 import { Car } from '../types';
 import VehicleImage from '../components/VehicleImage';
 import { whatsAppUrl } from '../utils/whatsapp';
 import { vehicleApi } from '../services/api';
+import {
+  getVehicleStatus,
+  getVehicleStatusLabel,
+  getVehicleActionButtonClass,
+  getVehicleActionButtonLabel,
+  getVehicleAvailabilityDotClass,
+  isVehicleBookable,
+} from '../utils/vehicleAvailability';
 
 const categories = ['All', 'Hatchback', 'Sedan', 'SUV', 'Premium Luxury'];
 
@@ -14,16 +22,27 @@ export default function Fleet() {
   const [filtered, setFiltered] = useState<Car[]>([]);
   const [activeCategory, setActiveCategory] = useState('All');
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
   useEffect(() => {
     let cancelled = false;
     async function loadFleet() {
-      const all = await vehicleApi.list();
-      if (cancelled) return;
-      const availableCars = (all || []).filter(car => !car.isDeleted && ((car.status || (car.availability ? 'available' : 'booked')) === 'available')).slice(0, 8);
-      setCars(availableCars);
-      setFiltered(availableCars);
-      setLoading(false);
+      try {
+        const all = await vehicleApi.list();
+        if (cancelled) return;
+        const availableCars = (all || []).filter(car => !car.isDeleted && getVehicleStatus(car) === 'available').slice(0, 8);
+        setCars(availableCars);
+        setFiltered(availableCars);
+        setError('');
+      } catch (err) {
+        if (cancelled) return;
+        console.error('Failed to load fleet preview:', err);
+        setError('Unable to load fleet. Please refresh the page or try again later.');
+        setCars([]);
+        setFiltered([]);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
     }
     loadFleet();
     const interval = window.setInterval(loadFleet, 15000);
@@ -100,6 +119,22 @@ export default function Fleet() {
               </div>
             ))}
           </div>
+        ) : error ? (
+          <div className="text-center py-24">
+            <div className="w-20 h-20 rounded-full bg-red-100 border border-red-200 flex items-center justify-center mx-auto mb-4">
+              <span className="text-red-600 text-2xl">!</span>
+            </div>
+            <h3 className="font-playfair text-2xl font-bold text-earth mb-2">Unable to load fleet</h3>
+            <p className="text-stone font-poppins">{error}</p>
+          </div>
+        ) : cars.length === 0 ? (
+          <div className="text-center py-24">
+            <div className="w-20 h-20 rounded-full bg-brown/10 border border-brown/20 flex items-center justify-center mx-auto mb-4">
+              <Search className="w-10 h-10 text-brown/40" />
+            </div>
+            <h3 className="font-playfair text-2xl font-bold text-earth mb-2">No vehicles available.</h3>
+            <p className="text-stone font-poppins">Please check back soon for the latest fleet.</p>
+          </div>
         ) : (
           <AnimatePresence mode="wait">
             <motion.div
@@ -166,9 +201,9 @@ function CarCard({ car, index }: { car: Car; index: number }) {
         {/* Availability */}
         <div className="absolute top-3 right-3">
           <div className="flex items-center gap-1.5 bg-cream/90 backdrop-blur-sm px-2 py-1 rounded-full">
-            <div className={`w-1.5 h-1.5 rounded-full ${((car.status || (car.availability ? 'available' : 'booked')) === 'available') ? 'bg-green-500' : (car.status === 'maintenance' ? 'bg-orange-500' : 'bg-red-500')}`} />
+            <div className={`w-1.5 h-1.5 rounded-full ${getVehicleAvailabilityDotClass(car)}`} />
             <span className="text-xs text-earth font-poppins">
-              {car.status || (car.availability ? 'Available' : 'Booked')}
+              {getVehicleStatusLabel(car)}
             </span>
           </div>
         </div>
@@ -224,11 +259,11 @@ function CarCard({ car, index }: { car: Car; index: number }) {
           </Link>
           <Link
             to={`/fleet/${car.id}?book=true`}
-            className={`flex-1 text-center rounded-lg px-3 py-2 text-[11px] font-semibold transition ${((car.status || (car.availability ? 'available' : 'booked')) === 'available') ? 'bg-brown text-white' : 'bg-white/10 text-[#7A7466] cursor-not-allowed'}`}
-            tabIndex={((car.status || (car.availability ? 'available' : 'booked')) === 'available') ? 0 : -1}
-            aria-disabled={((car.status || (car.availability ? 'available' : 'booked')) !== 'available')}
+            className={`flex-1 text-center rounded-lg px-3 py-2 text-[11px] font-semibold transition ${getVehicleActionButtonClass(car)}`}
+            tabIndex={isVehicleBookable(car) ? 0 : -1}
+            aria-disabled={!isVehicleBookable(car)}
           >
-            {((car.status || (car.availability ? 'available' : 'booked')) === 'available') ? 'Book Now' : (car.status === 'maintenance' ? 'Maintenance' : 'Not Available')}
+            {getVehicleActionButtonLabel(car)}
           </Link>
         </div>
         {/* WhatsApp */}

@@ -67,6 +67,9 @@ export type Booking = {
   documents?: Array<{
     id: string;
     fileUrl: string;
+    originalName?: string;
+    mimeType?: string;
+    size?: number;
     ocr?: Record<string, unknown>;
   }>;
   verification_status?: 'pending' | 'partial' | 'verified';
