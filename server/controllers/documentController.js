@@ -4,7 +4,9 @@ import Document from '../models/Document.js';
 import { cloudinaryConfig } from '../config/cloudinary.js';
 
 function logStage(stage, details) {
-  console.log(`[OCR][${stage}]`, JSON.stringify(details));
+  if (process.env.NODE_ENV !== 'production') {
+    console.log(`[OCR][${stage}]`, JSON.stringify(details));
+  }
 }
 
 const upload = multer({

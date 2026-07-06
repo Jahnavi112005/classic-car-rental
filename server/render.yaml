@@ -1,0 +1,30 @@
+# Render service definition for backend
+services:
+  - type: web
+    name: classic-car-rental-backend
+    env: node
+    plan: starter
+    region: oregon
+    repo: <YOUR_GIT_REPO_URL>
+    branch: main
+    buildCommand: "npm install && npm run build || true"
+    startCommand: "npm start"
+    envVars:
+      - key: MONGO_URI
+        value: ""
+      - key: JWT_SECRET
+        value: ""
+      - key: SMTP_HOST
+        value: ""
+      - key: SMTP_PORT
+        value: ""
+      - key: SMTP_SECURE
+        value: ""
+      - key: SMTP_USER
+        value: ""
+      - key: SMTP_PASS
+        value: ""
+      - key: FROM_EMAIL
+        value: ""
+      - key: CLIENT_URL
+        value: ""

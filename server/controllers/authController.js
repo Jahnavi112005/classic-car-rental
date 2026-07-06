@@ -13,7 +13,7 @@ export const register = asyncHandler(async (req, res) => {
 
 export const login = asyncHandler(async (req, res) => {
   const { email, password } = req.body;
-  console.log('Login request received for:', email);
+  if (process.env.NODE_ENV !== 'production') console.log('Login request received for:', email);
 
   if (!email || !password) {
     return res.status(400).json({ success: false, message: 'Email and password are required.' });
@@ -21,17 +21,17 @@ export const login = asyncHandler(async (req, res) => {
 
   const user = await User.findOne({ email });
   if (!user) {
-    console.log('User not found for email:', email);
+    if (process.env.NODE_ENV !== 'production') console.log('User not found for email:', email);
     return res.status(401).json({ success: false, message: 'Invalid email or password.' });
   }
 
   const matched = await user.matchPassword(password);
   if (!matched) {
-    console.log('Password did not match for:', email);
+    if (process.env.NODE_ENV !== 'production') console.log('Password did not match for:', email);
     return res.status(401).json({ success: false, message: 'Invalid email or password.' });
   }
 
-  console.log('Password matched for:', email);
+  if (process.env.NODE_ENV !== 'production') console.log('Password matched for:', email);
 
   if (user.role !== 'booking_staff' && user.role !== 'owner') {
     console.log('Unauthorized role for login attempt:', user.role);
@@ -43,7 +43,7 @@ export const login = asyncHandler(async (req, res) => {
 
 export const forgotPassword = asyncHandler(async (req, res) => {
   const email = String(req.body.email || '').trim().toLowerCase();
-  console.log('ForgotPassword received email:', email);
+  if (process.env.NODE_ENV !== 'production') console.log('ForgotPassword received email:', email);
   if (!email) {
     return res.status(400).json({ success: false, message: 'Email is required.' });
   }
