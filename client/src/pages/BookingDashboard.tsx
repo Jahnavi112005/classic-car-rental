@@ -49,6 +49,40 @@ const dashboardSections = [
 ];
 
 const vehicleStatuses = ['available', 'booked', 'maintenance'];
+const DASHBOARD_CACHE_KEY = 'booking_dashboard_cache_v1';
+const DASHBOARD_CACHE_TTL_MS = 60 * 1000;
+
+type DashboardCache = {
+  ts: number;
+  bookings: Booking[];
+  vehicles: CarType[];
+  deletedVehicles: CarType[];
+};
+
+function readDashboardCache(): DashboardCache | null {
+  try {
+    const raw = sessionStorage.getItem(DASHBOARD_CACHE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as DashboardCache;
+    if (!parsed || !Array.isArray(parsed.bookings) || !Array.isArray(parsed.vehicles) || !Array.isArray(parsed.deletedVehicles)) {
+      return null;
+    }
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+function writeDashboardCache(payload: Omit<DashboardCache, 'ts'>) {
+  try {
+    sessionStorage.setItem(
+      DASHBOARD_CACHE_KEY,
+      JSON.stringify({ ...payload, ts: Date.now() } satisfies DashboardCache)
+    );
+  } catch {
+    // Ignore storage failures.
+  }
+}
 
 export default function BookingDashboard() {
   const location = useLocation();
@@ -56,6 +90,7 @@ export default function BookingDashboard() {
   const { signOut, profile } = useAuth();
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [vehicles, setVehicles] = useState<CarType[]>([]);
+  const [deletedVehicles, setDeletedVehicles] = useState<CarType[]>([]);
   const [fleetStatusChanges, setFleetStatusChanges] = useState<Record<string, string>>({});
   const [updatingStatus, setUpdatingStatus] = useState<Record<string, boolean>>({});
   const [complaints, setComplaints] = useState<Inquiry[]>([]);
@@ -64,15 +99,32 @@ export default function BookingDashboard() {
   const [filterStatus, setFilterStatus] = useState('');
   const [search, setSearch] = useState('');
   const [selectedVehicle, setSelectedVehicle] = useState<string | null>(null);
+  const [fleetView, setFleetView] = useState<'active' | 'trash'>('active');
+  const [confirmAction, setConfirmAction] = useState<null | {
+    mode: 'soft' | 'hard';
+    vehicleId: string;
+    vehicleName: string;
+  }>(null);
   const [selectedBookingId, setSelectedBookingId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [statusUpdate, setStatusUpdate] = useState<Record<string, string>>({});
   const [toast, setToast] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
   useEffect(() => {
-    fetchData();
-    const interval = window.setInterval(fetchData, 15000);
-    return () => window.clearInterval(interval);
+    const cached = readDashboardCache();
+    if (cached) {
+      setBookings(cached.bookings || []);
+      setVehicles((cached.vehicles || []).filter(v => !v.isDeleted));
+      setDeletedVehicles((cached.deletedVehicles || []).filter(v => v.isDeleted));
+      setFleetStatusChanges((cached.vehicles || []).reduce((acc, vehicle) => ({
+        ...acc,
+        [String(vehicle.id)]: vehicle.status || 'available',
+      }), {}));
+      setLoading(false);
+    }
+
+    fetchData(!cached, { force: !cached });
+    return;
   }, []);
 
   useEffect(() => {
@@ -92,17 +144,46 @@ export default function BookingDashboard() {
     return () => window.clearTimeout(timer);
   }, [toast]);
 
-  async function fetchData(showLoading = true) {
+  async function fetchData(showLoading = true, options?: { force?: boolean }) {
     if (showLoading) setLoading(true);
+
+    const cached = readDashboardCache();
+    const isCacheFresh = !!cached && Date.now() - cached.ts < DASHBOARD_CACHE_TTL_MS;
+    if (!options?.force && isCacheFresh) {
+      setBookings(cached.bookings || []);
+      setVehicles((cached.vehicles || []).filter(v => !v.isDeleted));
+      setDeletedVehicles((cached.deletedVehicles || []).filter(v => v.isDeleted));
+      setFleetStatusChanges((cached.vehicles || []).reduce((acc, vehicle) => ({
+        ...acc,
+        [String(vehicle.id)]: vehicle.status || 'available',
+      }), {}));
+      if (showLoading) setLoading(false);
+      return;
+    }
+
     try {
-      const [bookingList, vehicleList] = await Promise.all([bookingApi.list(), vehicleApi.list()]);
+      const [bookingList, vehicleList, deletedList] = await Promise.all([
+        bookingApi.list(),
+        vehicleApi.list(),
+        vehicleApi.list({ deletedOnly: 'true' }),
+      ]);
       setBookings(bookingList || []);
       const activeVehicles = (vehicleList || []).filter(v => !v.isDeleted);
       setVehicles(activeVehicles);
+      setDeletedVehicles((deletedList || []).filter(v => v.isDeleted));
       setFleetStatusChanges(activeVehicles.reduce((acc, vehicle) => ({
         ...acc,
         [String(vehicle.id)]: vehicle.status || 'available',
       }), {}));
+
+      writeDashboardCache({
+        bookings: bookingList || [],
+        vehicles: activeVehicles,
+        deletedVehicles: (deletedList || []).filter(v => v.isDeleted),
+      });
+      if (selectedVehicle && ![...activeVehicles, ...(deletedList || [])].some(v => String(v.id) === selectedVehicle)) {
+        setSelectedVehicle(null);
+      }
     } catch (err) {
       console.error('Failed to load booking dashboard data:', err);
       setToast({ type: 'error', message: 'Unable to load dashboard data. Please try again later.' });
@@ -137,6 +218,11 @@ export default function BookingDashboard() {
   }, [bookings, filterStatus, search, activeSection]);
 
   const filteredVehicles = useMemo(() => vehicles, [vehicles]);
+  const allVehicles = useMemo(() => [...vehicles, ...deletedVehicles], [vehicles, deletedVehicles]);
+  const selectedVehicleData = useMemo(
+    () => allVehicles.find(vehicle => String(vehicle.id) === selectedVehicle) || null,
+    [allVehicles, selectedVehicle]
+  );
 
   const showBookingSection = ['dashboard', 'today', 'pending', 'approved', 'rejected', 'completed'].includes(activeSection);
   const showVehicleSection = activeSection === 'dashboard' || activeSection === 'vehicles';
@@ -156,10 +242,10 @@ export default function BookingDashboard() {
     if (newStatus === previousStatus) return;
     setUpdatingStatus(prev => ({ ...prev, [id]: true }));
     try {
-      await vehicleApi.updateStatus(id, newStatus);
-      setVehicles(prev => prev.map(vehicle => vehicle.id === id ? { ...vehicle, status: newStatus, availability: newStatus === 'available' } : vehicle));
+      await vehicleApi.update(id, { status: newStatus as CarType['status'], availability: newStatus === 'available' });
+      setVehicles(prev => prev.map(vehicle => String(vehicle.id) === id ? { ...vehicle, status: newStatus as CarType['status'], availability: newStatus === 'available' } : vehicle));
       setToast({ type: 'success', message: 'Fleet status updated successfully.' });
-      await fetchData(false);
+      await fetchData(false, { force: true });
     } catch (err) {
       setFleetStatusChanges(prev => ({ ...prev, [id]: previousStatus }));
       const serverMessage = err?.response?.data?.message || err?.message || 'Unable to update fleet status. Please try again.';
@@ -170,16 +256,62 @@ export default function BookingDashboard() {
   }
 
   async function softDeleteVehicle(id: string) {
+    const vehicleName = allVehicles.find(v => String(v.id) === id)?.name || 'this vehicle';
+    setConfirmAction({ mode: 'soft', vehicleId: id, vehicleName });
+  }
+
+  async function performSoftDelete(id: string) {
     setUpdatingStatus(prev => ({ ...prev, [id]: true }));
     try {
       await vehicleApi.update(id, { isDeleted: true });
-      setToast({ type: 'success', message: 'Vehicle removed from fleet.' });
-      await fetchData(false);
+      setToast({ type: 'success', message: 'Vehicle moved to Trash. You can restore it anytime.' });
+      await fetchData(false, { force: true });
     } catch (err) {
       setToast({ type: 'error', message: 'Unable to remove vehicle. Please try again.' });
     } finally {
       setUpdatingStatus(prev => ({ ...prev, [id]: false }));
     }
+  }
+
+  async function restoreVehicle(id: string) {
+    setUpdatingStatus(prev => ({ ...prev, [`restore-${id}`]: true }));
+    try {
+      await vehicleApi.restore(id);
+      setToast({ type: 'success', message: 'Vehicle restored to active fleet.' });
+      await fetchData(false, { force: true });
+    } catch {
+      setToast({ type: 'error', message: 'Unable to restore vehicle. Please try again.' });
+    } finally {
+      setUpdatingStatus(prev => ({ ...prev, [`restore-${id}`]: false }));
+    }
+  }
+
+  async function hardDeleteVehicle(id: string) {
+    const vehicleName = allVehicles.find(v => String(v.id) === id)?.name || 'this vehicle';
+    setConfirmAction({ mode: 'hard', vehicleId: id, vehicleName });
+  }
+
+  async function performHardDelete(id: string) {
+    setUpdatingStatus(prev => ({ ...prev, [`hard-${id}`]: true }));
+    try {
+      await vehicleApi.hardDelete(id);
+      setToast({ type: 'success', message: 'Vehicle permanently deleted.' });
+      await fetchData(false, { force: true });
+    } catch {
+      setToast({ type: 'error', message: 'Unable to permanently delete vehicle. Please try again.' });
+    } finally {
+      setUpdatingStatus(prev => ({ ...prev, [`hard-${id}`]: false }));
+    }
+  }
+
+  async function handleConfirmAction() {
+    if (!confirmAction) return;
+    if (confirmAction.mode === 'soft') {
+      await performSoftDelete(confirmAction.vehicleId);
+    } else {
+      await performHardDelete(confirmAction.vehicleId);
+    }
+    setConfirmAction(null);
   }
 
   function normalizePhoneNumber(phone?: string) {
@@ -214,7 +346,7 @@ export default function BookingDashboard() {
       const message = err?.response?.data?.message || err?.message || 'Unable to update booking status.';
       setToast({ type: 'error', message });
     } finally {
-      await fetchData();
+      await fetchData(true, { force: true });
       setLoading(false);
     }
   }
@@ -399,9 +531,25 @@ export default function BookingDashboard() {
                     <div className="text-sm uppercase tracking-[0.2em] text-[#C7B894] mb-2">Vehicle Availability</div>
                     <h2 className="text-2xl font-semibold">Fleet Management</h2>
                   </div>
-                  <button onClick={() => fetchData()} className="inline-flex items-center gap-2 rounded-3xl border border-white/10 bg-[#111315] px-4 py-3 text-sm text-white hover:bg-white/5">
-                    <RefreshCw className="w-4 h-4" /> Refresh Fleet
-                  </button>
+                  <div className="flex items-center gap-3">
+                    <div className="inline-flex rounded-3xl border border-white/10 bg-[#111315] p-1">
+                      <button
+                        onClick={() => setFleetView('active')}
+                        className={`rounded-3xl px-4 py-2 text-xs font-semibold transition ${fleetView === 'active' ? 'bg-white/10 text-white' : 'text-[#B8B3A0]'}`}
+                      >
+                        Active ({vehicles.length})
+                      </button>
+                      <button
+                        onClick={() => setFleetView('trash')}
+                        className={`rounded-3xl px-4 py-2 text-xs font-semibold transition ${fleetView === 'trash' ? 'bg-white/10 text-white' : 'text-[#B8B3A0]'}`}
+                      >
+                        Trash ({deletedVehicles.length})
+                      </button>
+                    </div>
+                    <button onClick={() => fetchData(true, { force: true })} className="inline-flex items-center gap-2 rounded-3xl border border-white/10 bg-[#111315] px-4 py-3 text-sm text-white hover:bg-white/5">
+                      <RefreshCw className="w-4 h-4" /> Refresh Fleet
+                    </button>
+                  </div>
                 </div>
 
                 {toast && (
@@ -422,7 +570,7 @@ export default function BookingDashboard() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-white/10">
-                      {filteredVehicles.map(vehicle => {
+                      {(fleetView === 'active' ? filteredVehicles : deletedVehicles).map(vehicle => {
                         const vehicleId = String(vehicle.id);
                         const selectedStatus = fleetStatusChanges[vehicleId] || vehicle.status || 'available';
                         return (
@@ -439,44 +587,70 @@ export default function BookingDashboard() {
                               </div>
                             </td>
                             <td className="px-4 py-4">
-                              <div className="space-y-2">
-                                <span className="inline-flex items-center rounded-full border px-3 py-1 text-xs text-white/90 border-white/10 bg-[#111315]">
-                                  {vehicle.status || 'available'}
+                              {fleetView === 'active' ? (
+                                <div className="space-y-2">
+                                  <span className="inline-flex items-center rounded-full border px-3 py-1 text-xs text-white/90 border-white/10 bg-[#111315]">
+                                    {vehicle.status || 'available'}
+                                  </span>
+                                  <select
+                                    value={selectedStatus}
+                                    onChange={e => setFleetStatusChanges(prev => ({ ...prev, [vehicleId]: e.target.value }))}
+                                    className="w-full rounded-3xl border border-white/10 bg-[#0F1014] px-3 py-2 text-sm text-white outline-none"
+                                  >
+                                    {vehicleStatuses.map(status => (
+                                      <option key={status} value={status}>{status}</option>
+                                    ))}
+                                  </select>
+                                </div>
+                              ) : (
+                                <span className="inline-flex items-center rounded-full border px-3 py-1 text-xs text-rose-300 border-rose-500/30 bg-rose-500/10">
+                                  In Trash
                                 </span>
-                                <select
-                                  value={selectedStatus}
-                                  onChange={e => setFleetStatusChanges(prev => ({ ...prev, [vehicleId]: e.target.value }))}
-                                  className="w-full rounded-3xl border border-white/10 bg-[#0F1014] px-3 py-2 text-sm text-white outline-none"
-                                >
-                                  {vehicleStatuses.map(status => (
-                                    <option key={status} value={status}>{status}</option>
-                                  ))}
-                                </select>
-                              </div>
+                              )}
                             </td>
                             <td className="px-4 py-4 text-[#D9D1B1]">{vehicle.availability ? 'Yes' : 'No'}</td>
                             <td className="px-4 py-4 text-[#D9D1B1]">{vehicle.updated_at ? new Date(vehicle.updated_at).toLocaleString() : 'N/A'}</td>
                             <td className="px-4 py-4 space-y-3">
-                              <button
-                                onClick={() => handleFleetStatusUpdate(vehicleId, selectedStatus)}
-                                disabled={updatingStatus[vehicleId]}
-                                className="w-full rounded-3xl bg-[#1F2937] px-4 py-3 text-xs font-semibold text-white hover:bg-[#111827] disabled:cursor-not-allowed disabled:opacity-50"
-                              >
-                                Update
-                              </button>
+                              {fleetView === 'active' ? (
+                                <button
+                                  onClick={() => handleFleetStatusUpdate(vehicleId, selectedStatus)}
+                                  disabled={updatingStatus[vehicleId]}
+                                  className="w-full rounded-3xl bg-[#1F2937] px-4 py-3 text-xs font-semibold text-white hover:bg-[#111827] disabled:cursor-not-allowed disabled:opacity-50"
+                                >
+                                  {updatingStatus[vehicleId] ? 'Updating...' : 'Update'}
+                                </button>
+                              ) : (
+                                <button
+                                  onClick={() => restoreVehicle(vehicleId)}
+                                  disabled={updatingStatus[`restore-${vehicleId}`]}
+                                  className="w-full rounded-3xl bg-[#2C7A59] px-4 py-3 text-xs font-semibold text-white hover:bg-[#1F5E40] disabled:cursor-not-allowed disabled:opacity-50"
+                                >
+                                  {updatingStatus[`restore-${vehicleId}`] ? 'Restoring...' : 'Restore'}
+                                </button>
+                              )}
                               <button
                                 onClick={() => setSelectedVehicle(selectedVehicle === vehicleId ? null : vehicleId)}
                                 className="w-full rounded-3xl border border-white/10 bg-[#0F1014] px-4 py-3 text-xs font-semibold text-[#D9D1B1] hover:bg-white/5"
                               >
                                 View Details
                               </button>
-                              <button
-                                onClick={() => softDeleteVehicle(vehicleId)}
-                                disabled={updatingStatus[vehicleId]}
-                                className="w-full rounded-3xl bg-[#9F1239] px-4 py-3 text-xs font-semibold text-white hover:bg-[#7B1030] disabled:cursor-not-allowed disabled:opacity-50"
-                              >
-                                Soft Delete
-                              </button>
+                              {fleetView === 'active' ? (
+                                <button
+                                  onClick={() => softDeleteVehicle(vehicleId)}
+                                  disabled={updatingStatus[vehicleId]}
+                                  className="w-full rounded-3xl bg-[#9F1239] px-4 py-3 text-xs font-semibold text-white hover:bg-[#7B1030] disabled:cursor-not-allowed disabled:opacity-50"
+                                >
+                                  Move To Trash
+                                </button>
+                              ) : (
+                                <button
+                                  onClick={() => hardDeleteVehicle(vehicleId)}
+                                  disabled={updatingStatus[`hard-${vehicleId}`]}
+                                  className="w-full rounded-3xl bg-[#7B1030] px-4 py-3 text-xs font-semibold text-white hover:bg-[#5E0C25] disabled:cursor-not-allowed disabled:opacity-50"
+                                >
+                                  {updatingStatus[`hard-${vehicleId}`] ? 'Deleting...' : 'Delete Permanently'}
+                                </button>
+                              )}
                             </td>
                           </tr>
                         );
@@ -485,20 +659,18 @@ export default function BookingDashboard() {
                   </table>
                 </div>
 
-                {selectedVehicle && (
+                {selectedVehicleData && (
                   <div className="mt-6 rounded-[28px] border border-white/10 bg-[#0F1014] p-6 text-sm text-[#D9D1B1]">
                     <div className="mb-3 text-sm uppercase tracking-[0.2em] text-[#C7B894]">Vehicle Details</div>
-                    {vehicles.filter(vehicle => String(vehicle.id) === selectedVehicle).map(vehicle => (
-                      <div key={vehicle.id} className="grid gap-4 md:grid-cols-2">
-                        <div><strong>Name:</strong> {vehicle.name}</div>
-                        <div><strong>Category:</strong> {vehicle.category}</div>
-                        <div><strong>Year:</strong> {vehicle.year}</div>
-                        <div><strong>Fuel:</strong> {vehicle.fuel_type}</div>
-                        <div><strong>Transmission:</strong> {vehicle.transmission}</div>
-                        <div><strong>Seats:</strong> {vehicle.seats}</div>
-                        <div className="md:col-span-2"><strong>Description:</strong> {vehicle.description}</div>
-                      </div>
-                    ))}
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <div><strong>Name:</strong> {selectedVehicleData.name}</div>
+                      <div><strong>Category:</strong> {selectedVehicleData.category}</div>
+                      <div><strong>Year:</strong> {selectedVehicleData.year}</div>
+                      <div><strong>Fuel:</strong> {selectedVehicleData.fuel_type}</div>
+                      <div><strong>Transmission:</strong> {selectedVehicleData.transmission}</div>
+                      <div><strong>Seats:</strong> {selectedVehicleData.seats}</div>
+                      <div className="md:col-span-2"><strong>Description:</strong> {selectedVehicleData.description}</div>
+                    </div>
                   </div>
                 )}
               </section>
@@ -584,6 +756,35 @@ export default function BookingDashboard() {
           </main>
         </div>
       </div>
+
+      {confirmAction && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 px-4">
+          <div className="w-full max-w-md rounded-3xl border border-white/10 bg-[#0F1014] p-6 text-white shadow-2xl">
+            <h3 className="text-lg font-semibold mb-2">
+              {confirmAction.mode === 'soft' ? 'Move Vehicle To Trash?' : 'Delete Vehicle Permanently?'}
+            </h3>
+            <p className="text-sm text-[#B8B3A0] mb-6">
+              {confirmAction.mode === 'soft'
+                ? `"${confirmAction.vehicleName}" will be moved to Trash and can be restored later.`
+                : `"${confirmAction.vehicleName}" will be permanently deleted and cannot be retrieved again.`}
+            </p>
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => setConfirmAction(null)}
+                className="rounded-2xl border border-white/10 px-4 py-2 text-sm text-[#D9D1B1] hover:bg-white/5"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleConfirmAction}
+                className={`rounded-2xl px-4 py-2 text-sm font-semibold text-white ${confirmAction.mode === 'soft' ? 'bg-[#9F1239] hover:bg-[#7B1030]' : 'bg-[#7B1030] hover:bg-[#5E0C25]'}`}
+              >
+                {confirmAction.mode === 'soft' ? 'Move To Trash' : 'Delete Permanently'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       <Footer />
     </div>
   );

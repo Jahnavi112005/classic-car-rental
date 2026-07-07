@@ -20,6 +20,7 @@ const vehicleSchema = new mongoose.Schema(
     availability: { type: Boolean, default: true },
     status: { type: String, enum: ['available', 'booked', 'maintenance'], default: 'available' },
     isDeleted: { type: Boolean, default: false },
+    hardDeleted: { type: Boolean, default: false },
     security_deposit: { type: Number, default: 5000 },
     rating: { type: Number, default: 4.5 },
     reviews_count: { type: Number, default: 0 },

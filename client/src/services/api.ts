@@ -64,8 +64,12 @@ export const authApi = {
 };
 
 export const vehicleApi = {
-  async list() {
-    const { data } = await api.get<Car[]>('/vehicles');
+  async list(params?: Record<string, string>) {
+    const { data } = await api.get<Car[]>('/vehicles', { params });
+    return data;
+  },
+  async create(payload: Partial<Car>) {
+    const { data } = await api.post<Car>('/vehicles', payload);
     return data;
   },
   async get(id: string) {
@@ -82,6 +86,13 @@ export const vehicleApi = {
   },
   async remove(id: string | number) {
     await api.delete(`/vehicles/${id}`);
+  },
+  async restore(id: string | number) {
+    const { data } = await api.patch<Car>(`/vehicles/${id}/restore`);
+    return data;
+  },
+  async hardDelete(id: string | number) {
+    await api.delete(`/vehicles/${id}/hard`);
   },
 };
 
