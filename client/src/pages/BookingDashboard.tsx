@@ -49,6 +49,9 @@ const dashboardSections = [
 ];
 
 const vehicleStatuses = ['available', 'booked', 'maintenance'];
+const vehicleCategories: CarType['category'][] = ['Hatchback', 'Sedan', 'SUV', 'Luxury', 'Premium Luxury'];
+const vehicleFuelTypes: CarType['fuel_type'][] = ['Petrol', 'Diesel', 'Electric', 'Hybrid', 'CNG'];
+const vehicleTransmissions: CarType['transmission'][] = ['Manual', 'Automatic'];
 const DASHBOARD_CACHE_KEY = 'booking_dashboard_cache_v1';
 const DASHBOARD_CACHE_TTL_MS = 60 * 1000;
 
@@ -99,6 +102,15 @@ export default function BookingDashboard() {
   const [filterStatus, setFilterStatus] = useState('');
   const [search, setSearch] = useState('');
   const [selectedVehicle, setSelectedVehicle] = useState<string | null>(null);
+  const [vehicleDrafts, setVehicleDrafts] = useState<Record<string, {
+    name: string;
+    category: CarType['category'];
+    year: string;
+    fuel_type: CarType['fuel_type'];
+    transmission: CarType['transmission'];
+    seats: string;
+    description: string;
+  }>>({});
   const [fleetView, setFleetView] = useState<'active' | 'trash'>('active');
   const [confirmAction, setConfirmAction] = useState<null | {
     mode: 'soft' | 'hard';
@@ -218,11 +230,6 @@ export default function BookingDashboard() {
   }, [bookings, filterStatus, search, activeSection]);
 
   const filteredVehicles = useMemo(() => vehicles, [vehicles]);
-  const allVehicles = useMemo(() => [...vehicles, ...deletedVehicles], [vehicles, deletedVehicles]);
-  const selectedVehicleData = useMemo(
-    () => allVehicles.find(vehicle => String(vehicle.id) === selectedVehicle) || null,
-    [allVehicles, selectedVehicle]
-  );
 
   const showBookingSection = ['dashboard', 'today', 'pending', 'approved', 'rejected', 'completed'].includes(activeSection);
   const showVehicleSection = activeSection === 'dashboard' || activeSection === 'vehicles';
@@ -238,14 +245,91 @@ export default function BookingDashboard() {
   }
 
   async function handleFleetStatusUpdate(id: string, newStatus: string) {
-    const previousStatus = vehicles.find(vehicle => String(vehicle.id) === id)?.status || 'available';
-    if (newStatus === previousStatus) return;
+    const targetVehicle = vehicles.find(vehicle => String(vehicle.id) === id);
+    if (!targetVehicle) return;
+
+    const previousStatus = targetVehicle.status || 'available';
+    const draft = vehicleDrafts[id];
+
+    const hasDetailChanges = !!draft && (
+      draft.name.trim() !== targetVehicle.name ||
+      draft.category !== targetVehicle.category ||
+      draft.year.trim() !== String(targetVehicle.year || '') ||
+      draft.fuel_type !== targetVehicle.fuel_type ||
+      draft.transmission !== targetVehicle.transmission ||
+      String(draft.seats).trim() !== String(targetVehicle.seats || '') ||
+      draft.description.trim() !== (targetVehicle.description || '').trim()
+    );
+
+    if (newStatus === previousStatus && !hasDetailChanges) {
+      setToast({ type: 'success', message: 'No changes to update.' });
+      return;
+    }
+
     setUpdatingStatus(prev => ({ ...prev, [id]: true }));
     try {
-      await vehicleApi.update(id, { status: newStatus as CarType['status'], availability: newStatus === 'available' });
-      setVehicles(prev => prev.map(vehicle => String(vehicle.id) === id ? { ...vehicle, status: newStatus as CarType['status'], availability: newStatus === 'available' } : vehicle));
-      setToast({ type: 'success', message: 'Fleet status updated successfully.' });
-      await fetchData(false, { force: true });
+      const draftYear = draft?.year?.trim() || String(targetVehicle.year || '');
+      const draftSeats = Number(draft?.seats);
+      const payload: Partial<CarType> = {
+        status: newStatus as CarType['status'],
+        availability: newStatus === 'available',
+        name: draft?.name?.trim() || targetVehicle.name,
+        category: (draft?.category || targetVehicle.category) as CarType['category'],
+        year: draftYear,
+        yearRange: draftYear,
+        fuel_type: (draft?.fuel_type || targetVehicle.fuel_type) as CarType['fuel_type'],
+        transmission: (draft?.transmission || targetVehicle.transmission) as CarType['transmission'],
+        seats: Number.isFinite(draftSeats) && draftSeats > 0 ? draftSeats : targetVehicle.seats,
+        description: draft?.description?.trim() || targetVehicle.description,
+      };
+
+      const updatedVehicle = await vehicleApi.update(id, {
+        ...payload,
+      });
+      setVehicles(prev => prev.map(vehicle => {
+        if (String(vehicle.id) !== id) return vehicle;
+        return {
+          ...vehicle,
+          ...payload,
+          ...updatedVehicle,
+          status: (updatedVehicle?.status || newStatus) as CarType['status'],
+          availability: typeof updatedVehicle?.availability === 'boolean' ? updatedVehicle.availability : newStatus === 'available',
+          updated_at: updatedVehicle?.updated_at || new Date().toISOString(),
+        };
+      }));
+      setFleetStatusChanges(prev => ({
+        ...prev,
+        [id]: (updatedVehicle?.status || newStatus) as string,
+      }));
+      setVehicleDrafts(prev => ({
+        ...prev,
+        [id]: {
+          name: updatedVehicle?.name || payload.name || targetVehicle.name,
+          category: (updatedVehicle?.category || payload.category || targetVehicle.category) as CarType['category'],
+          year: String(updatedVehicle?.year || payload.year || targetVehicle.year || ''),
+          fuel_type: (updatedVehicle?.fuel_type || payload.fuel_type || targetVehicle.fuel_type) as CarType['fuel_type'],
+          transmission: (updatedVehicle?.transmission || payload.transmission || targetVehicle.transmission) as CarType['transmission'],
+          seats: String(updatedVehicle?.seats || payload.seats || targetVehicle.seats || ''),
+          description: updatedVehicle?.description || payload.description || targetVehicle.description || '',
+        },
+      }));
+      setToast({ type: 'success', message: 'Vehicle updated successfully.' });
+
+      const activeVehicles = vehicles.map(vehicle => {
+        if (String(vehicle.id) !== id) return vehicle;
+        return {
+          ...vehicle,
+          ...updatedVehicle,
+          status: (updatedVehicle?.status || newStatus) as CarType['status'],
+          availability: typeof updatedVehicle?.availability === 'boolean' ? updatedVehicle.availability : newStatus === 'available',
+          updated_at: updatedVehicle?.updated_at || new Date().toISOString(),
+        };
+      });
+      writeDashboardCache({
+        bookings,
+        vehicles: activeVehicles,
+        deletedVehicles,
+      });
     } catch (err) {
       setFleetStatusChanges(prev => ({ ...prev, [id]: previousStatus }));
       const serverMessage = err?.response?.data?.message || err?.message || 'Unable to update fleet status. Please try again.';
@@ -256,7 +340,7 @@ export default function BookingDashboard() {
   }
 
   async function softDeleteVehicle(id: string) {
-    const vehicleName = allVehicles.find(v => String(v.id) === id)?.name || 'this vehicle';
+    const vehicleName = [...vehicles, ...deletedVehicles].find(v => String(v.id) === id)?.name || 'this vehicle';
     setConfirmAction({ mode: 'soft', vehicleId: id, vehicleName });
   }
 
@@ -287,7 +371,7 @@ export default function BookingDashboard() {
   }
 
   async function hardDeleteVehicle(id: string) {
-    const vehicleName = allVehicles.find(v => String(v.id) === id)?.name || 'this vehicle';
+    const vehicleName = [...vehicles, ...deletedVehicles].find(v => String(v.id) === id)?.name || 'this vehicle';
     setConfirmAction({ mode: 'hard', vehicleId: id, vehicleName });
   }
 
@@ -312,6 +396,53 @@ export default function BookingDashboard() {
       await performHardDelete(confirmAction.vehicleId);
     }
     setConfirmAction(null);
+  }
+
+  function handleViewVehicleDetails(vehicleId: string) {
+    if (selectedVehicle === vehicleId) {
+      setSelectedVehicle(null);
+      return;
+    }
+
+    const vehicle = [...vehicles, ...deletedVehicles].find(v => String(v.id) === vehicleId);
+    if (vehicle) {
+      setVehicleDrafts(prev => ({
+        ...prev,
+        [vehicleId]: prev[vehicleId] || {
+          name: vehicle.name,
+          category: vehicle.category,
+          year: String(vehicle.year || ''),
+          fuel_type: vehicle.fuel_type,
+          transmission: vehicle.transmission,
+          seats: String(vehicle.seats || ''),
+          description: vehicle.description || '',
+        },
+      }));
+    }
+
+    setSelectedVehicle(vehicleId);
+  }
+
+  function updateVehicleDraft<K extends 'name' | 'category' | 'year' | 'fuel_type' | 'transmission' | 'seats' | 'description'>(
+    vehicleId: string,
+    key: K,
+    value: string
+  ) {
+    const vehicle = [...vehicles, ...deletedVehicles].find(v => String(v.id) === vehicleId);
+    if (!vehicle) return;
+    setVehicleDrafts(prev => ({
+      ...prev,
+      [vehicleId]: {
+        name: prev[vehicleId]?.name ?? vehicle.name,
+        category: (prev[vehicleId]?.category ?? vehicle.category) as CarType['category'],
+        year: prev[vehicleId]?.year ?? String(vehicle.year || ''),
+        fuel_type: (prev[vehicleId]?.fuel_type ?? vehicle.fuel_type) as CarType['fuel_type'],
+        transmission: (prev[vehicleId]?.transmission ?? vehicle.transmission) as CarType['transmission'],
+        seats: prev[vehicleId]?.seats ?? String(vehicle.seats || ''),
+        description: prev[vehicleId]?.description ?? vehicle.description ?? '',
+        [key]: value,
+      },
+    }));
   }
 
   function normalizePhoneNumber(phone?: string) {
@@ -574,105 +705,174 @@ export default function BookingDashboard() {
                         const vehicleId = String(vehicle.id);
                         const selectedStatus = fleetStatusChanges[vehicleId] || vehicle.status || 'available';
                         return (
-                          <tr key={vehicleId} className="hover:bg-white/5 transition-colors">
-                            <td className="px-4 py-4">
-                              <div className="flex items-center gap-4">
-                                <div className="h-16 w-24 overflow-hidden rounded-3xl border border-white/10 bg-[#0F1014]">
-                                  <img src={getVehicleImagePath(vehicle)} alt={vehicle.name} className="h-full w-full object-cover" />
+                          [
+                            <tr key={`${vehicleId}-main`} className="hover:bg-white/5 transition-colors">
+                              <td className="px-4 py-4">
+                                <div className="flex items-center gap-4">
+                                  <div className="h-16 w-24 overflow-hidden rounded-3xl border border-white/10 bg-[#0F1014]">
+                                    <img src={getVehicleImagePath(vehicle)} alt={vehicle.name} className="h-full w-full object-cover" />
+                                  </div>
+                                  <div>
+                                    <div className="text-sm font-semibold text-white">{vehicle.name}</div>
+                                    <div className="text-xs text-[#B8B3A0]">{vehicle.brand} • {vehicle.model}</div>
+                                  </div>
                                 </div>
-                                <div>
-                                  <div className="text-sm font-semibold text-white">{vehicle.name}</div>
-                                  <div className="text-xs text-[#B8B3A0]">{vehicle.brand} • {vehicle.model}</div>
-                                </div>
-                              </div>
-                            </td>
-                            <td className="px-4 py-4">
-                              {fleetView === 'active' ? (
-                                <div className="space-y-2">
-                                  <span className="inline-flex items-center rounded-full border px-3 py-1 text-xs text-white/90 border-white/10 bg-[#111315]">
-                                    {vehicle.status || 'available'}
+                              </td>
+                              <td className="px-4 py-4">
+                                {fleetView === 'active' ? (
+                                  <div className="space-y-2">
+                                    <span className="inline-flex items-center rounded-full border px-3 py-1 text-xs text-white/90 border-white/10 bg-[#111315]">
+                                      {vehicle.status || 'available'}
+                                    </span>
+                                    <select
+                                      value={selectedStatus}
+                                      onChange={e => setFleetStatusChanges(prev => ({ ...prev, [vehicleId]: e.target.value }))}
+                                      className="w-full rounded-3xl border border-white/10 bg-[#0F1014] px-3 py-2 text-sm text-white outline-none"
+                                    >
+                                      {vehicleStatuses.map(status => (
+                                        <option key={status} value={status}>{status}</option>
+                                      ))}
+                                    </select>
+                                  </div>
+                                ) : (
+                                  <span className="inline-flex items-center rounded-full border px-3 py-1 text-xs text-rose-300 border-rose-500/30 bg-rose-500/10">
+                                    In Trash
                                   </span>
-                                  <select
-                                    value={selectedStatus}
-                                    onChange={e => setFleetStatusChanges(prev => ({ ...prev, [vehicleId]: e.target.value }))}
-                                    className="w-full rounded-3xl border border-white/10 bg-[#0F1014] px-3 py-2 text-sm text-white outline-none"
+                                )}
+                              </td>
+                              <td className="px-4 py-4 text-[#D9D1B1]">{vehicle.availability ? 'Yes' : 'No'}</td>
+                              <td className="px-4 py-4 text-[#D9D1B1]">{vehicle.updated_at ? new Date(vehicle.updated_at).toLocaleString() : 'N/A'}</td>
+                              <td className="px-4 py-4 space-y-3">
+                                {fleetView === 'active' ? (
+                                  <button
+                                    onClick={() => handleFleetStatusUpdate(vehicleId, selectedStatus)}
+                                    disabled={updatingStatus[vehicleId]}
+                                    className="w-full rounded-3xl bg-[#1F2937] px-4 py-3 text-xs font-semibold text-white hover:bg-[#111827] disabled:cursor-not-allowed disabled:opacity-50"
                                   >
-                                    {vehicleStatuses.map(status => (
-                                      <option key={status} value={status}>{status}</option>
-                                    ))}
-                                  </select>
-                                </div>
-                              ) : (
-                                <span className="inline-flex items-center rounded-full border px-3 py-1 text-xs text-rose-300 border-rose-500/30 bg-rose-500/10">
-                                  In Trash
-                                </span>
-                              )}
-                            </td>
-                            <td className="px-4 py-4 text-[#D9D1B1]">{vehicle.availability ? 'Yes' : 'No'}</td>
-                            <td className="px-4 py-4 text-[#D9D1B1]">{vehicle.updated_at ? new Date(vehicle.updated_at).toLocaleString() : 'N/A'}</td>
-                            <td className="px-4 py-4 space-y-3">
-                              {fleetView === 'active' ? (
+                                    {updatingStatus[vehicleId] ? 'Updating...' : 'Update'}
+                                  </button>
+                                ) : (
+                                  <button
+                                    onClick={() => restoreVehicle(vehicleId)}
+                                    disabled={updatingStatus[`restore-${vehicleId}`]}
+                                    className="w-full rounded-3xl bg-[#2C7A59] px-4 py-3 text-xs font-semibold text-white hover:bg-[#1F5E40] disabled:cursor-not-allowed disabled:opacity-50"
+                                  >
+                                    {updatingStatus[`restore-${vehicleId}`] ? 'Restoring...' : 'Restore'}
+                                  </button>
+                                )}
                                 <button
-                                  onClick={() => handleFleetStatusUpdate(vehicleId, selectedStatus)}
-                                  disabled={updatingStatus[vehicleId]}
-                                  className="w-full rounded-3xl bg-[#1F2937] px-4 py-3 text-xs font-semibold text-white hover:bg-[#111827] disabled:cursor-not-allowed disabled:opacity-50"
+                                  onClick={() => handleViewVehicleDetails(vehicleId)}
+                                  className="w-full rounded-3xl border border-white/10 bg-[#0F1014] px-4 py-3 text-xs font-semibold text-[#D9D1B1] hover:bg-white/5"
                                 >
-                                  {updatingStatus[vehicleId] ? 'Updating...' : 'Update'}
+                                  {selectedVehicle === vehicleId ? 'Hide Details' : 'View Details'}
                                 </button>
-                              ) : (
-                                <button
-                                  onClick={() => restoreVehicle(vehicleId)}
-                                  disabled={updatingStatus[`restore-${vehicleId}`]}
-                                  className="w-full rounded-3xl bg-[#2C7A59] px-4 py-3 text-xs font-semibold text-white hover:bg-[#1F5E40] disabled:cursor-not-allowed disabled:opacity-50"
-                                >
-                                  {updatingStatus[`restore-${vehicleId}`] ? 'Restoring...' : 'Restore'}
-                                </button>
-                              )}
-                              <button
-                                onClick={() => setSelectedVehicle(selectedVehicle === vehicleId ? null : vehicleId)}
-                                className="w-full rounded-3xl border border-white/10 bg-[#0F1014] px-4 py-3 text-xs font-semibold text-[#D9D1B1] hover:bg-white/5"
-                              >
-                                View Details
-                              </button>
-                              {fleetView === 'active' ? (
-                                <button
-                                  onClick={() => softDeleteVehicle(vehicleId)}
-                                  disabled={updatingStatus[vehicleId]}
-                                  className="w-full rounded-3xl bg-[#9F1239] px-4 py-3 text-xs font-semibold text-white hover:bg-[#7B1030] disabled:cursor-not-allowed disabled:opacity-50"
-                                >
-                                  Move To Trash
-                                </button>
-                              ) : (
-                                <button
-                                  onClick={() => hardDeleteVehicle(vehicleId)}
-                                  disabled={updatingStatus[`hard-${vehicleId}`]}
-                                  className="w-full rounded-3xl bg-[#7B1030] px-4 py-3 text-xs font-semibold text-white hover:bg-[#5E0C25] disabled:cursor-not-allowed disabled:opacity-50"
-                                >
-                                  {updatingStatus[`hard-${vehicleId}`] ? 'Deleting...' : 'Delete Permanently'}
-                                </button>
-                              )}
-                            </td>
-                          </tr>
+                                {fleetView === 'active' ? (
+                                  <button
+                                    onClick={() => softDeleteVehicle(vehicleId)}
+                                    disabled={updatingStatus[vehicleId]}
+                                    className="w-full rounded-3xl bg-[#9F1239] px-4 py-3 text-xs font-semibold text-white hover:bg-[#7B1030] disabled:cursor-not-allowed disabled:opacity-50"
+                                  >
+                                    Move To Trash
+                                  </button>
+                                ) : (
+                                  <button
+                                    onClick={() => hardDeleteVehicle(vehicleId)}
+                                    disabled={updatingStatus[`hard-${vehicleId}`]}
+                                    className="w-full rounded-3xl bg-[#7B1030] px-4 py-3 text-xs font-semibold text-white hover:bg-[#5E0C25] disabled:cursor-not-allowed disabled:opacity-50"
+                                  >
+                                    {updatingStatus[`hard-${vehicleId}`] ? 'Deleting...' : 'Delete Permanently'}
+                                  </button>
+                                )}
+                              </td>
+                            </tr>,
+                            selectedVehicle === vehicleId ? (
+                              <tr key={`${vehicleId}-details`} className="bg-white/5">
+                                <td colSpan={5} className="px-4 pb-4">
+                                  <div className="rounded-2xl border border-white/10 bg-[#0F1014] p-4 text-sm text-[#D9D1B1]">
+                                    <div className="mb-3 text-xs uppercase tracking-[0.2em] text-[#C7B894]">Vehicle Details</div>
+                                    <div className="grid gap-3 md:grid-cols-3">
+                                      <div>
+                                        <div className="mb-1 text-xs uppercase tracking-[0.12em] text-[#C7B894]">Name</div>
+                                        <input
+                                          value={vehicleDrafts[vehicleId]?.name ?? vehicle.name}
+                                          onChange={e => updateVehicleDraft(vehicleId, 'name', e.target.value)}
+                                          className="w-full rounded-2xl border border-white/10 bg-[#111315] px-3 py-2 text-sm text-white outline-none"
+                                        />
+                                      </div>
+                                      <div>
+                                        <div className="mb-1 text-xs uppercase tracking-[0.12em] text-[#C7B894]">Category</div>
+                                        <select
+                                          value={vehicleDrafts[vehicleId]?.category ?? vehicle.category}
+                                          onChange={e => updateVehicleDraft(vehicleId, 'category', e.target.value)}
+                                          className="w-full rounded-2xl border border-white/10 bg-[#111315] px-3 py-2 text-sm text-white outline-none"
+                                        >
+                                          {vehicleCategories.map(category => (
+                                            <option key={category} value={category}>{category}</option>
+                                          ))}
+                                        </select>
+                                      </div>
+                                      <div>
+                                        <div className="mb-1 text-xs uppercase tracking-[0.12em] text-[#C7B894]">Year</div>
+                                        <input
+                                          value={vehicleDrafts[vehicleId]?.year ?? String(vehicle.year || '')}
+                                          onChange={e => updateVehicleDraft(vehicleId, 'year', e.target.value)}
+                                          className="w-full rounded-2xl border border-white/10 bg-[#111315] px-3 py-2 text-sm text-white outline-none"
+                                        />
+                                      </div>
+                                      <div>
+                                        <div className="mb-1 text-xs uppercase tracking-[0.12em] text-[#C7B894]">Fuel</div>
+                                        <select
+                                          value={vehicleDrafts[vehicleId]?.fuel_type ?? vehicle.fuel_type}
+                                          onChange={e => updateVehicleDraft(vehicleId, 'fuel_type', e.target.value)}
+                                          className="w-full rounded-2xl border border-white/10 bg-[#111315] px-3 py-2 text-sm text-white outline-none"
+                                        >
+                                          {vehicleFuelTypes.map(type => (
+                                            <option key={type} value={type}>{type}</option>
+                                          ))}
+                                        </select>
+                                      </div>
+                                      <div>
+                                        <div className="mb-1 text-xs uppercase tracking-[0.12em] text-[#C7B894]">Transmission</div>
+                                        <select
+                                          value={vehicleDrafts[vehicleId]?.transmission ?? vehicle.transmission}
+                                          onChange={e => updateVehicleDraft(vehicleId, 'transmission', e.target.value)}
+                                          className="w-full rounded-2xl border border-white/10 bg-[#111315] px-3 py-2 text-sm text-white outline-none"
+                                        >
+                                          {vehicleTransmissions.map(type => (
+                                            <option key={type} value={type}>{type}</option>
+                                          ))}
+                                        </select>
+                                      </div>
+                                      <div>
+                                        <div className="mb-1 text-xs uppercase tracking-[0.12em] text-[#C7B894]">Seats</div>
+                                        <input
+                                          type="number"
+                                          min={1}
+                                          value={vehicleDrafts[vehicleId]?.seats ?? String(vehicle.seats || '')}
+                                          onChange={e => updateVehicleDraft(vehicleId, 'seats', e.target.value)}
+                                          className="w-full rounded-2xl border border-white/10 bg-[#111315] px-3 py-2 text-sm text-white outline-none"
+                                        />
+                                      </div>
+                                      <div className="md:col-span-3">
+                                        <div className="mb-1 text-xs uppercase tracking-[0.12em] text-[#C7B894]">Description</div>
+                                        <textarea
+                                          rows={3}
+                                          value={vehicleDrafts[vehicleId]?.description ?? vehicle.description}
+                                          onChange={e => updateVehicleDraft(vehicleId, 'description', e.target.value)}
+                                          className="w-full rounded-2xl border border-white/10 bg-[#111315] px-3 py-2 text-sm text-white outline-none"
+                                        />
+                                      </div>
+                                    </div>
+                                  </div>
+                                </td>
+                              </tr>
+                            ) : null,
+                          ]
                         );
                       })}
                     </tbody>
                   </table>
                 </div>
-
-                {selectedVehicleData && (
-                  <div className="mt-6 rounded-[28px] border border-white/10 bg-[#0F1014] p-6 text-sm text-[#D9D1B1]">
-                    <div className="mb-3 text-sm uppercase tracking-[0.2em] text-[#C7B894]">Vehicle Details</div>
-                    <div className="grid gap-4 md:grid-cols-2">
-                      <div><strong>Name:</strong> {selectedVehicleData.name}</div>
-                      <div><strong>Category:</strong> {selectedVehicleData.category}</div>
-                      <div><strong>Year:</strong> {selectedVehicleData.year}</div>
-                      <div><strong>Fuel:</strong> {selectedVehicleData.fuel_type}</div>
-                      <div><strong>Transmission:</strong> {selectedVehicleData.transmission}</div>
-                      <div><strong>Seats:</strong> {selectedVehicleData.seats}</div>
-                      <div className="md:col-span-2"><strong>Description:</strong> {selectedVehicleData.description}</div>
-                    </div>
-                  </div>
-                )}
               </section>
             )}
 
