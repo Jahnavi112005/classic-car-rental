@@ -58,10 +58,8 @@ export default function CarDetail() {
       setLoading(false);
     }
     fetchCar();
-    const interval = window.setInterval(fetchCar, 15000);
     return () => {
       cancelled = true;
-      window.clearInterval(interval);
     };
   }, [id]);
 

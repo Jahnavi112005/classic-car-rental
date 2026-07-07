@@ -50,10 +50,8 @@ export default function FeaturedVehicles() {
     }
 
     loadFeaturedVehicles();
-    const interval = window.setInterval(loadFeaturedVehicles, 15000);
     return () => {
       cancelled = true;
-      window.clearInterval(interval);
     };
   }, []);
 

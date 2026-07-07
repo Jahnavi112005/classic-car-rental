@@ -45,10 +45,8 @@ export default function Fleet() {
       }
     }
     loadFleet();
-    const interval = window.setInterval(loadFleet, 15000);
     return () => {
       cancelled = true;
-      window.clearInterval(interval);
     };
   }, []);
 
