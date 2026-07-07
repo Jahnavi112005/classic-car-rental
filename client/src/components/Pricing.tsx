@@ -5,7 +5,7 @@ import { ArrowRight, Car, Crown, Info, Users, type LucideIcon } from 'lucide-rea
 const fiveSeaterCars = [
   { model: 'i10 (2015–2019)', price: 1899 },
   { model: 'Celerio (2014–2016)', price: 1899 },
-  { model: 'Swift (2008–2011)', price: 1899 },
+  { model: 'Swift (2008–2011)', price: 1999 },
   { model: 'Amaze (2014–2017)', price: 1999 },
   { model: 'Etios Liva (2012–2016)', price: 1999 },
   { model: 'Swift (2011–2015)', price: 1999 },

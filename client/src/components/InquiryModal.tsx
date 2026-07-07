@@ -4,7 +4,7 @@ import { X, Send, CheckCircle, MessageSquare } from 'lucide-react';
 import { inquiryApi } from '../services/api';
 
 const vehicles = [
-  'i10 Sportz', 'Swift ZXI', 'Honda City ZX', 'Verna SX', 'Creta SX',
+  'i10 Sportz', 'Grand i10', 'Swift ZXI', 'Honda City ZX', 'Verna SX', 'Creta SX',
   'Mahindra Thar LX', 'Toyota Fortuner', 'Innova Crysta ZX', 'BMW 5 Series',
   'Mercedes C-Class', 'Innova Hycross', 'Audi A6', 'Other',
 ];
@@ -64,6 +64,28 @@ export default function InquiryModal({ open, onClose, preselectedVehicle }: Inqu
       setError('Failed to submit. Please try again or call us directly.');
     } else {
       setSuccess(true);
+
+      try {
+        const isComplaint = /complaint|complain|issue|problem|refund/i.test(String(form.message || ''));
+        if (isComplaint) {
+          const subject = encodeURIComponent('Customer Support / Complaint - Classic Car Rentals');
+          const body = encodeURIComponent([
+            `Name: ${form.name}`,
+            `Phone: ${form.phone}`,
+            `Email: ${form.email}`,
+            `Vehicle: ${form.vehicle_interested || 'Not specified'}`,
+            `Pickup: ${form.pickup_date || 'N/A'}`,
+            `Drop: ${form.drop_date || 'N/A'}`,
+            '',
+            `Message:\n${form.message || ''}`,
+          ].join('\n'));
+
+          // Open user's mail client with prefilled complaint details
+          window.open(`mailto:owner@classiccarrentals.in?subject=${subject}&body=${body}`);
+        }
+      } catch (e) {
+        // noop - don't block success flow if mailto fails
+      }
     }
   }
 

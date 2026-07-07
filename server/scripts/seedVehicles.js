@@ -6,16 +6,12 @@ import { fleetCars } from '../utils/fleetSeed.js';
 async function importFleetVehicles() {
   await mongoose.connect(env.mongoUri, { autoIndex: true });
 
+  const seedIds = fleetCars.map(car => car.id);
   let insertedCount = 0;
-  let skippedCount = 0;
+  let updatedCount = 0;
 
   for (const car of fleetCars) {
     const existing = await Vehicle.findOne({ seedId: car.id });
-
-    if (existing) {
-      skippedCount += 1;
-      continue;
-    }
 
     const vehicleData = {
       seedId: car.id,
@@ -32,25 +28,42 @@ async function importFleetVehicles() {
       images: car.images,
       description: car.description,
       features: car.features,
-      availability: car.availability,
       security_deposit: car.security_deposit,
       rating: car.rating,
       reviews_count: car.reviews_count,
       featured: car.featured || false,
-      status: 'available',
       isDeleted: false,
-      createdAt: new Date(car.created_at),
       updatedAt: new Date(car.created_at),
     };
 
-    await Vehicle.create(vehicleData);
+    if (existing) {
+      await Vehicle.findByIdAndUpdate(existing._id, vehicleData, {
+        new: true,
+        runValidators: true,
+      });
+      updatedCount += 1;
+      continue;
+    }
+
+    await Vehicle.create({
+      ...vehicleData,
+      availability: car.availability,
+      status: 'available',
+      createdAt: new Date(car.created_at),
+    });
     insertedCount += 1;
   }
+
+  const cleanupResult = await Vehicle.updateMany(
+    { seedId: { $nin: seedIds }, isDeleted: false },
+    { isDeleted: true }
+  );
 
   const totalCount = await Vehicle.countDocuments({ isDeleted: false });
   console.log(`Imported fleet vehicles into MongoDB.`);
   console.log(`Inserted: ${insertedCount}`);
-  console.log(`Skipped existing: ${skippedCount}`);
+  console.log(`Updated: ${updatedCount}`);
+  console.log(`Marked old seeded vehicles deleted: ${cleanupResult.modifiedCount}`);
   console.log(`Total active vehicles now: ${totalCount}`);
 
   await mongoose.disconnect();
