@@ -57,15 +57,6 @@ const app = express();
 
 app.use(helmet());
 
-const apiLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 100,
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: { success: false, message: 'Too many requests, please try again later.' },
-});
-app.use(apiLimiter);
-
 // Support multiple allowed origins (comma-separated in CLIENT_URL) and production-safe CORS
 const allowedOrigins = (env.clientUrl || '').split(',').map(s => s.trim()).filter(Boolean);
 const corsOptions = {
@@ -93,6 +84,16 @@ const corsOptions = {
 
 app.use(cors(corsOptions));
 app.options('*', cors(corsOptions));
+
+const apiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 100,
+  skip: (req) => req.method === 'OPTIONS',
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, message: 'Too many requests, please try again later.' },
+});
+app.use(apiLimiter);
 app.use(express.json({ limit: '10mb' }));
 app.use('/uploads', express.static('uploads'));
 
