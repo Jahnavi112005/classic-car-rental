@@ -57,30 +57,43 @@ const app = express();
 
 app.use(helmet());
 
+// Support multiple allowed origins (comma-separated in CLIENT_URL) and production-safe CORS
+const allowedOrigins = (env.clientUrl || '').split(',').map(s => s.trim()).filter(Boolean);
+const corsOptions = {
+  origin: (origin, callback) => {
+    // Allow server-to-server requests without Origin.
+    if (!origin) return callback(null, true);
+
+    // In development, allow localhost origins across common dev ports.
+    if (env.nodeEnv !== 'production' && /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(origin)) {
+      return callback(null, true);
+    }
+
+    // Production and explicit allowlist handling.
+    if (allowedOrigins.includes('*') || allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+
+    return callback(new Error(`CORS policy: Origin not allowed (${origin})`));
+  },
+  credentials: true,
+  methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  optionsSuccessStatus: 204,
+};
+
+app.use(cors(corsOptions));
+app.options('*', cors(corsOptions));
+
 const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 100,
+  skip: (req) => req.method === 'OPTIONS',
   standardHeaders: true,
   legacyHeaders: false,
   message: { success: false, message: 'Too many requests, please try again later.' },
 });
 app.use(apiLimiter);
-
-// Support multiple allowed origins (comma-separated in CLIENT_URL) and production-safe CORS
-const allowedOrigins = (env.clientUrl || '').split(',').map(s => s.trim()).filter(Boolean);
-app.use(
-  cors({
-    origin: (origin, callback) => {
-      if (!origin) return callback(null, true); // allow non-browser server-to-server requests
-      if (process.env.NODE_ENV !== 'production' && allowedOrigins.length === 0) return callback(null, true);
-      if (allowedOrigins.includes(origin) || allowedOrigins.includes('*')) return callback(null, true);
-      return callback(new Error('CORS policy: Origin not allowed'));
-    },
-    credentials: true,
-    methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
-  }),
-);
 app.use(express.json({ limit: '10mb' }));
 app.use('/uploads', express.static('uploads'));
 
