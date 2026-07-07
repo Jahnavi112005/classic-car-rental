@@ -20,6 +20,7 @@ import { api, bookingApi, bookingActions, inquiryApi, vehicleApi } from '../serv
 import { Booking, Car as CarType, Inquiry } from '../types';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
+import BookingDetailsModal from '../components/BookingDetailsModal';
 import { whatsAppUrl } from '../utils/whatsapp';
 import { getVehicleImagePath } from '../utils/vehicleImage';
 import { useAuth } from '../context/AuthContext';
@@ -62,6 +63,7 @@ export default function BookingDashboard() {
   const [filterStatus, setFilterStatus] = useState('');
   const [search, setSearch] = useState('');
   const [selectedVehicle, setSelectedVehicle] = useState<string | null>(null);
+  const [selectedBookingId, setSelectedBookingId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [statusUpdate, setStatusUpdate] = useState<Record<string, string>>({});
   const [toast, setToast] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
@@ -179,10 +181,41 @@ export default function BookingDashboard() {
     }
   }
 
+  function normalizePhoneNumber(phone?: string) {
+    const digits = String(phone || '').replace(/\D/g, '');
+    if (!digits) return '';
+    if (digits.length === 10) return `+91${digits}`;
+    if (digits.startsWith('91')) return `+${digits}`;
+    return `+${digits}`;
+  }
+
+  function getPhoneLink(phone?: string) {
+    const digits = String(phone || '').replace(/\D/g, '');
+    if (!digits) return '';
+    return `tel:${digits.length === 10 ? `+91${digits}` : `+${digits}`}`;
+  }
+
+  function getWhatsAppLink(phone?: string) {
+    const digits = String(phone || '').replace(/\D/g, '');
+    if (!digits) return '';
+    const normalized = digits.startsWith('91') ? digits : `91${digits}`;
+    return `https://wa.me/${normalized}`;
+  }
+
   async function handleBookingAction(id: string, action: 'approve' | 'reject' | 'completed') {
     setLoading(true);
-    await bookingActions.action(id, { action });
-    await fetchData();
+    try {
+      if (action === 'approve') await bookingApi.approve(id);
+      if (action === 'reject') await bookingApi.reject(id);
+      if (action === 'completed') await bookingApi.complete(id);
+      setToast({ type: 'success', message: `Booking ${action === 'approve' ? 'approved' : action === 'reject' ? 'rejected' : 'completed'} successfully.` });
+    } catch (err) {
+      const message = err?.response?.data?.message || err?.message || 'Unable to update booking status.';
+      setToast({ type: 'error', message });
+    } finally {
+      await fetchData();
+      setLoading(false);
+    }
   }
 
   if (loading) {
@@ -201,6 +234,7 @@ export default function BookingDashboard() {
   return (
     <div className="min-h-screen bg-[#0D0D0F] text-white">
       <Navbar />
+        <BookingDetailsModal id={selectedBookingId} onClose={() => setSelectedBookingId(null)} />
       <div className="pt-24 px-4 sm:px-6 lg:px-8">
         <div className="grid lg:grid-cols-[280px_1fr] gap-6">
           <aside className="rounded-[32px] border border-white/10 bg-[#111315]/80 p-6 shadow-[0_30px_80px_-40px_rgba(0,0,0,0.55)] backdrop-blur-xl">
@@ -328,8 +362,14 @@ export default function BookingDashboard() {
                             >
                               Complete
                             </button>
+                            <button
+                              onClick={() => setSelectedBookingId(booking.id)}
+                              className="w-full rounded-2xl bg-[#3B82F6] px-3 py-2 text-xs font-semibold text-white hover:bg-[#2563EB]"
+                            >
+                              View Details
+                            </button>
                             <a
-                              href={whatsAppUrl(booking.customers?.phone || booking.profiles?.phone || '')}
+                              href={getWhatsAppLink(booking.customers?.whatsapp || booking.customers?.phone || booking.profiles?.phone || '')}
                               target="_blank"
                               rel="noreferrer"
                               className="w-full inline-flex items-center justify-center gap-2 rounded-2xl border border-white/10 bg-[#0F1014] px-3 py-2 text-xs font-semibold text-[#D9D1B1] hover:bg-white/5"
@@ -337,7 +377,7 @@ export default function BookingDashboard() {
                               <MessageSquare className="w-4 h-4" /> WhatsApp
                             </a>
                             <a
-                              href={`tel:${booking.customers?.phone || booking.profiles?.phone || ''}`}
+                              href={getPhoneLink(booking.customers?.phone || booking.profiles?.phone || '')}
                               className="w-full inline-flex items-center justify-center gap-2 rounded-2xl border border-white/10 bg-[#0F1014] px-3 py-2 text-xs font-semibold text-[#D9D1B1] hover:bg-white/5"
                             >
                               <Phone className="w-4 h-4" /> Call

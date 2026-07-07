@@ -5,9 +5,14 @@ type CustomerPayload = {
   name: string;
   email?: string;
   phone?: string;
+  whatsapp?: string;
   address?: string;
-  documentNumber?: string;
+  city?: string;
+  state?: string;
   country?: string;
+  pinCode?: string;
+  documentNumber?: string;
+  documentType?: string;
 };
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
@@ -135,6 +140,18 @@ export const bookingActions = {
   },
   async audit(id: string) {
     const { data } = await api.get(`/bookings/${id}/audit`);
+    return data;
+  },
+  async approve(id: string) {
+    const { data } = await api.patch<Booking>(`/bookings/${id}/approve`);
+    return data;
+  },
+  async reject(id: string) {
+    const { data } = await api.patch<Booking>(`/bookings/${id}/reject`);
+    return data;
+  },
+  async complete(id: string) {
+    const { data } = await api.patch<Booking>(`/bookings/${id}/complete`);
     return data;
   },
 };

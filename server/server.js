@@ -1,3 +1,8 @@
+import dns from "node:dns";
+
+dns.setServers(["8.8.8.8", "8.8.4.4"]);
+
+console.log("DNS Servers:", dns.getServers());
 // Note: Removed DNS override used for local debugging.
 import cors from 'cors';
 import express from 'express';

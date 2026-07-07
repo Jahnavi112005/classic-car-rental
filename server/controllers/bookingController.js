@@ -165,6 +165,23 @@ export const getBookingById = asyncHandler(async (req, res) => {
   res.json(normalizeBooking(booking));
 });
 
+async function updateBookingStatus(booking, status, userId, note = '') {
+  const from = booking.booking_status;
+  booking.booking_status = status;
+  if (status === 'approved') {
+    booking.verification_status = 'verified';
+  }
+  booking.status_history.push({ from, to: status, by: userId, note });
+  booking.timeline.push({ event: `status_${status}`, ts: new Date(), by: userId, meta: { note } });
+  await booking.save();
+
+  if (booking.car_id) {
+    const availability = status === 'approved' ? false : true;
+    const vehicleStatus = status === 'approved' ? 'booked' : 'available';
+    await Vehicle.findByIdAndUpdate(booking.car_id, { status: vehicleStatus, availability });
+  }
+}
+
 export const changeBookingStatus = asyncHandler(async (req, res) => {
   if (!['owner', 'booking_staff'].includes(req.user.role)) {
     res.status(403);
@@ -176,40 +193,65 @@ export const changeBookingStatus = asyncHandler(async (req, res) => {
     throw new Error('Booking not found');
   }
   const { status, note } = req.body;
-  const from = booking.booking_status;
-  booking.booking_status = status;
-  if (status === 'approved') {
-    booking.verification_status = 'verified';
-  }
-  booking.status_history.push({ from, to: status, by: req.user._id, note: note || '' });
-  booking.timeline.push({ event: `status_${status}`, ts: new Date(), by: req.user._id, meta: { note } });
-  await booking.save();
-  await AuditLog.create({ admin: req.user._id, booking: booking._id, action: 'change_status', detail: { from, to: status, note }, ip: req.ip });
-
-  if (status === 'approved' && booking.car_id) {
-    await Vehicle.findByIdAndUpdate(booking.car_id, { status: 'booked', availability: false });
-  }
-
-  if (status === 'completed' && booking.car_id) {
-    await Vehicle.findByIdAndUpdate(booking.car_id, { status: 'available', availability: true });
-  }
-
-  if (status === 'rejected' && booking.car_id) {
-    await Vehicle.findByIdAndUpdate(booking.car_id, { status: 'available', availability: true });
-  }
-
-  if (status === 'cancelled' && booking.car_id) {
-    await Vehicle.findByIdAndUpdate(booking.car_id, { status: 'available', availability: true });
-  }
+  await updateBookingStatus(booking, status, req.user._id, note);
+  await AuditLog.create({ admin: req.user._id, booking: booking._id, action: 'change_status', detail: { from: booking.booking_status, to: status, note }, ip: req.ip });
 
   try {
-    const populated = await Booking.findById(booking._id).populate('user_id').populate('customer_id');
-    const to = populated.user_id?.email || populated.customer_id?.email;
+    const populatedRecipient = await Booking.findById(booking._id).populate('user_id').populate('customer_id');
+    const to = populatedRecipient.user_id?.email || populatedRecipient.customer_id?.email;
     if (to) notificationService.sendEmailNotification(to, 'Booking Status Updated', `Booking ${booking.bookingId} status changed to ${status}`);
   } catch (err) {
     console.warn('Notification failed', err.message || err);
   }
 
+  const populated = await Booking.findById(booking._id).populate('car_id').populate('user_id').populate('customer_id').populate('documents');
+  res.json(normalizeBooking(populated));
+});
+
+export const approveBooking = asyncHandler(async (req, res) => {
+  if (!['owner', 'booking_staff'].includes(req.user.role)) {
+    res.status(403);
+    throw new Error('Not allowed');
+  }
+  const booking = await Booking.findById(req.params.id);
+  if (!booking) {
+    res.status(404);
+    throw new Error('Booking not found');
+  }
+  await updateBookingStatus(booking, 'approved', req.user._id, req.body.note || '');
+  await AuditLog.create({ admin: req.user._id, booking: booking._id, action: 'approve', detail: { note: req.body.note || '' }, ip: req.ip });
+  const populated = await Booking.findById(booking._id).populate('car_id').populate('user_id').populate('customer_id').populate('documents');
+  res.json(normalizeBooking(populated));
+});
+
+export const rejectBooking = asyncHandler(async (req, res) => {
+  if (!['owner', 'booking_staff'].includes(req.user.role)) {
+    res.status(403);
+    throw new Error('Not allowed');
+  }
+  const booking = await Booking.findById(req.params.id);
+  if (!booking) {
+    res.status(404);
+    throw new Error('Booking not found');
+  }
+  await updateBookingStatus(booking, 'rejected', req.user._id, req.body.note || '');
+  await AuditLog.create({ admin: req.user._id, booking: booking._id, action: 'reject', detail: { note: req.body.note || '' }, ip: req.ip });
+  const populated = await Booking.findById(booking._id).populate('car_id').populate('user_id').populate('customer_id').populate('documents');
+  res.json(normalizeBooking(populated));
+});
+
+export const completeBooking = asyncHandler(async (req, res) => {
+  if (!['owner', 'booking_staff'].includes(req.user.role)) {
+    res.status(403);
+    throw new Error('Not allowed');
+  }
+  const booking = await Booking.findById(req.params.id);
+  if (!booking) {
+    res.status(404);
+    throw new Error('Booking not found');
+  }
+  await updateBookingStatus(booking, 'completed', req.user._id, req.body.note || '');
+  await AuditLog.create({ admin: req.user._id, booking: booking._id, action: 'complete', detail: { note: req.body.note || '' }, ip: req.ip });
   const populated = await Booking.findById(booking._id).populate('car_id').populate('user_id').populate('customer_id').populate('documents');
   res.json(normalizeBooking(populated));
 });
