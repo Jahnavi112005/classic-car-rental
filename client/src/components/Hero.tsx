@@ -38,12 +38,18 @@ export default function Hero() {
       className="relative overflow-hidden"
       style={{
         background: 'linear-gradient(135deg, #F8F3EA 0%, #F5EFE6 50%, #F0E8DC 100%)',
-        backgroundImage: `url(${heroIllustration})`,
-        backgroundRepeat: 'no-repeat',
-        backgroundPosition: 'center right',
-        backgroundSize: 'cover',
       }}
     >
+      {/* Desktop-only hero artwork so mobile does not render the same image twice */}
+      <div
+        className="hidden lg:block absolute inset-0 pointer-events-none"
+        style={{
+          backgroundImage: `url(${heroIllustration})`,
+          backgroundRepeat: 'no-repeat',
+          backgroundPosition: 'center right',
+          backgroundSize: 'cover',
+        }}
+      />
       {/* Decorative botanical left (hidden on small screens) */}
       <div className="hidden md:block absolute top-0 bottom-0 pointer-events-none select-none overflow-hidden" style={{ left: '-36px', width: '140px' }}>
         <BotanicalLeft />
