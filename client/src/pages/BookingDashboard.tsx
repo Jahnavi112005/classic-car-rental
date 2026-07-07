@@ -23,6 +23,7 @@ import Footer from '../components/Footer';
 import BookingDetailsModal from '../components/BookingDetailsModal';
 import { whatsAppUrl } from '../utils/whatsapp';
 import { getVehicleImagePath } from '../utils/vehicleImage';
+import { getAccountDisplayName, getRoleLabel } from '../utils/displayName';
 import { useAuth } from '../context/AuthContext';
 
 const statusPill = {
@@ -563,7 +564,7 @@ export default function BookingDashboard() {
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div className="rounded-3xl border border-white/10 bg-[#0F1014] p-5 text-sm text-[#D9D1B1]">
                     <div className="text-xs uppercase tracking-[0.2em] text-[#C7B894] mb-3">Name</div>
-                    <div>{profile?.name || 'N/A'}</div>
+                    <div>{profile ? getAccountDisplayName(profile) : 'N/A'}</div>
                   </div>
                   <div className="rounded-3xl border border-white/10 bg-[#0F1014] p-5 text-sm text-[#D9D1B1]">
                     <div className="text-xs uppercase tracking-[0.2em] text-[#C7B894] mb-3">Email</div>
@@ -571,7 +572,7 @@ export default function BookingDashboard() {
                   </div>
                   <div className="rounded-3xl border border-white/10 bg-[#0F1014] p-5 text-sm text-[#D9D1B1]">
                     <div className="text-xs uppercase tracking-[0.2em] text-[#C7B894] mb-3">Role</div>
-                    <div>{profile?.role || 'Booking staff'}</div>
+                    <div>{profile?.role ? getRoleLabel(profile.role) : 'Booking Staff'}</div>
                   </div>
                   <div className="rounded-3xl border border-white/10 bg-[#0F1014] p-5 text-sm text-[#D9D1B1]">
                     <div className="text-xs uppercase tracking-[0.2em] text-[#C7B894] mb-3">Member since</div>
