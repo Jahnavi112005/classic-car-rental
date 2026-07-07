@@ -3,7 +3,6 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Menu, X, LogOut, LayoutDashboard, Shield } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { normalizeRole } from '../utils/roles';
 
 const navLinks = [
   { label: 'Home', href: '/' },
@@ -21,6 +20,8 @@ export default function Navbar() {
   const location = useLocation();
   const navigate = useNavigate();
   const isHome = location.pathname === '/';
+  const rawFirstName = (profile?.name || '').trim().split(/\s+/)[0] || 'Account';
+  const displayName = rawFirstName.replace(/^([A-Za-z]+)\1$/i, '$1');
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 60);
@@ -168,8 +169,7 @@ export default function Navbar() {
                       : { borderColor: '#D4A44A', color: '#D4A44A', background: 'transparent' }
                   }
                 >
-                  {profile?.name?.split(' ')[0] || 'Account'}
-                  {profile?.name?.split(' ')[0] || 'Account'}
+                  {displayName}
                 </button>
                 <AnimatePresence>
                   {dropdownOpen && (
