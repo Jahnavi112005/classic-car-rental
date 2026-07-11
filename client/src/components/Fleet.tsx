@@ -59,20 +59,20 @@ export default function Fleet() {
   }, [activeCategory, cars]);
 
   return (
-    <section id="fleet" className="py-24 px-4 bg-section">
+    <section id="fleet" className="bg-section px-4 py-16 sm:py-20 lg:py-24">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          className="text-center mb-14"
+          className="mb-10 text-center sm:mb-14"
         >
           <div className="inline-flex items-center gap-2 border border-brown/30 bg-brown/5 rounded-full px-4 py-2 mb-6">
             <Zap className="w-3.5 h-3.5 text-brown" />
             <span className="font-montserrat text-xs tracking-widest text-brown uppercase">Our Premium Fleet</span>
           </div>
-          <h2 className="font-playfair text-4xl md:text-5xl font-bold text-earth mb-4">
+          <h2 className="mb-4 font-playfair text-3xl font-bold leading-tight text-earth sm:text-4xl md:text-5xl">
             Explore Our <span className="text-gradient-brown">Premium Fleet</span>
           </h2>
           <div className="w-20 h-0.5 bg-gradient-to-r from-transparent via-brown to-transparent mx-auto mb-6" />
@@ -86,7 +86,7 @@ export default function Fleet() {
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          className="flex flex-wrap justify-center gap-3 mb-12"
+          className="mb-10 flex flex-wrap justify-center gap-2 sm:gap-3 lg:mb-12"
         >
           {categories.map(cat => (
             <button
@@ -174,10 +174,10 @@ function CarCard({ car, index }: { car: Car; index: number }) {
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true }}
       transition={{ duration: 0.5, delay: index * 0.08 }}
-      className="luxury-card overflow-hidden group cursor-pointer"
+      className="luxury-card min-w-0 overflow-hidden group cursor-pointer"
     >
       {/* Image */}
-      <div className="relative h-48 overflow-hidden">
+      <div className="relative h-44 overflow-hidden sm:h-48">
         <VehicleImage
           vehicle={car}
           alt={car.name}
@@ -185,8 +185,8 @@ function CarCard({ car, index }: { car: Car; index: number }) {
           imgClassName="w-full h-full object-contain"
         />
         {/* Category badge */}
-        <div className="absolute top-3 left-3 space-y-2">
-          <span className="font-montserrat text-xs font-semibold px-3 py-1 bg-brown text-cream rounded-full">
+        <div className="absolute left-3 top-3 max-w-[70%] space-y-2">
+          <span className="inline-flex max-w-full rounded-full bg-brown px-2.5 py-1 font-montserrat text-[10px] font-semibold text-cream sm:text-xs">
             {car.category}
           </span>
           {car.featured && (
@@ -214,23 +214,23 @@ function CarCard({ car, index }: { car: Car; index: number }) {
       </div>
 
       {/* Content */}
-      <div className="p-5">
-        <h3 className="font-playfair text-lg font-bold text-earth mb-1 group-hover:text-brown transition-colors">
+      <div className="p-4 sm:p-5">
+        <h3 className="mb-1 break-words font-playfair text-lg font-bold text-earth transition-colors group-hover:text-brown">
           {car.name}
         </h3>
         <p className="text-xs text-stone font-poppins mb-4">{car.brand} · {car.yearRange || car.year}</p>
 
         {/* Specs */}
-        <div className="flex items-center justify-between mb-5">
-          <div className="flex items-center gap-1.5 text-xs text-stone">
+        <div className="mb-5 grid grid-cols-3 gap-2">
+          <div className="flex min-w-0 items-center gap-1.5 text-[11px] text-stone sm:text-xs">
             <Fuel className="w-3.5 h-3.5 text-brown/60" />
             <span>{car.fuel_type}</span>
           </div>
-          <div className="flex items-center gap-1.5 text-xs text-stone">
+          <div className="flex min-w-0 items-center gap-1.5 text-[11px] text-stone sm:text-xs">
             <Settings className="w-3.5 h-3.5 text-brown/60" />
             <span>{car.transmission}</span>
           </div>
-          <div className="flex items-center gap-1.5 text-xs text-stone">
+          <div className="flex min-w-0 items-center gap-1.5 text-[11px] text-stone sm:text-xs">
             <Users className="w-3.5 h-3.5 text-brown/60" />
             <span>{car.seats} Seats</span>
           </div>
@@ -247,17 +247,17 @@ function CarCard({ car, index }: { car: Car; index: number }) {
         </div>
 
         {/* Buttons */}
-        <div className="flex gap-2 mb-2">
+        <div className="mb-2 grid grid-cols-2 gap-2">
           <Link
             to={`/fleet/${car.id}`}
-            className="flex-1 text-center btn-outline-gold"
+            className="btn-outline-gold min-h-11 justify-center text-center"
             style={{ fontSize: '11px', padding: '9px 10px' }}
           >
             Details
           </Link>
           <Link
             to={`/fleet/${car.id}?book=true`}
-            className={`flex-1 text-center rounded-lg px-3 py-2 text-[11px] font-semibold transition ${getVehicleActionButtonClass(car)}`}
+            className={`flex min-h-11 items-center justify-center rounded-lg px-3 py-2 text-center text-[11px] font-semibold transition ${getVehicleActionButtonClass(car)}`}
             tabIndex={isVehicleBookable(car) ? 0 : -1}
             aria-disabled={!isVehicleBookable(car)}
           >
@@ -269,7 +269,7 @@ function CarCard({ car, index }: { car: Car; index: number }) {
           href={whatsAppUrl(car.name)}
           target="_blank"
           rel="noopener noreferrer"
-          className="w-full flex items-center justify-center gap-2 font-montserrat font-semibold text-white py-2.5 rounded-lg transition-all hover:opacity-90"
+          className="flex min-h-11 w-full items-center justify-center gap-2 rounded-lg py-2.5 font-montserrat font-semibold text-white transition-all hover:opacity-90"
           style={{ background: '#25D366', fontSize: '11px' }}
         >
           <svg width="14" height="14" viewBox="0 0 24 24" fill="white"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12.05 2C6.495 2 2 6.496 2 12.05c0 1.861.484 3.607 1.334 5.122L2 22l4.962-1.302A10.018 10.018 0 0012.05 22c5.555 0 10.05-4.495 10.05-10.05C22.1 6.496 17.605 2 12.05 2zm0 18.35a8.295 8.295 0 01-4.232-1.157l-.304-.18-3.146.826.838-3.074-.198-.315a8.291 8.291 0 01-1.271-4.45c0-4.589 3.734-8.323 8.313-8.323 4.58 0 8.313 3.734 8.313 8.323 0 4.59-3.733 8.35-8.313 8.35z" fill="white"/></svg>
@@ -279,4 +279,5 @@ function CarCard({ car, index }: { car: Car; index: number }) {
     </motion.div>
   );
 }
+
 

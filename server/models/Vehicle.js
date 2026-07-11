@@ -19,6 +19,7 @@ const vehicleSchema = new mongoose.Schema(
     features: [{ type: String }],
     availability: { type: Boolean, default: true },
     status: { type: String, enum: ['available', 'booked', 'maintenance'], default: 'available' },
+    displayOrder: { type: Number, index: true },
     isDeleted: { type: Boolean, default: false },
     hardDeleted: { type: Boolean, default: false },
     security_deposit: { type: Number, default: 5000 },
@@ -29,3 +30,4 @@ const vehicleSchema = new mongoose.Schema(
 );
 
 export default mongoose.model('Vehicle', vehicleSchema);
+

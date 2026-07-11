@@ -22,6 +22,8 @@ import debugRoutes from './routes/debugRoutes.js';
 import reviewRoutes from './routes/reviewRoutes.js';
 import userRoutes from './routes/userRoutes.js';
 import vehicleRoutes from './routes/vehicleRoutes.js';
+import popupRoutes from './routes/popupRoutes.js';
+import uploadRoutes from './routes/uploadRoutes.js';
 import { getOcrStatus } from './services/identityVerificationService.js';
 
 if (process.env.NODE_ENV === 'production') {
@@ -104,6 +106,8 @@ app.get('/api/health', (_req, res) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/vehicles', vehicleRoutes);
+app.use('/api/popups', popupRoutes);
+app.use('/api/uploads', uploadRoutes);
 app.use('/api/bookings', bookingRoutes);
 app.use('/api/inquiries', inquiryRoutes);
 app.use('/api/reviews', reviewRoutes);
@@ -138,3 +142,4 @@ app.use(errorHandler);
 app.listen(env.port, () => {
   console.log(`Server running on port ${env.port}`);
 });
+

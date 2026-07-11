@@ -38,6 +38,7 @@ export type Car = {
   features: string[];
   availability: boolean;
   status?: 'available' | 'booked' | 'maintenance';
+  displayOrder?: number;
   isDeleted?: boolean;
   hardDeleted?: boolean;
   security_deposit: number;
@@ -112,4 +113,17 @@ export type Inquiry = {
   pickup_date?: string | null;
   drop_date?: string | null;
   created_at: string;
+};
+
+export type Popup = {
+  id: string;
+  _id?: string;
+  title: string;
+  subtitle: string;
+  description: string;
+  image?: string;
+  enabled: boolean;
+  isDeleted?: boolean;
+  created_at?: string;
+  updated_at?: string;
 };

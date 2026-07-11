@@ -78,8 +78,8 @@ export default function Navbar() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-18 py-3">
           {/* Logo */}
-          <Link to="/" className="flex items-center gap-4 group">
-              <div className="w-14 h-14 rounded-xl overflow-hidden flex items-center justify-center bg-white shadow-sm transition-all duration-300">
+          <Link to="/" className="flex min-w-0 items-center gap-3 sm:gap-4 group">
+              <div className="h-11 w-11 shrink-0 overflow-hidden rounded-xl bg-white shadow-sm transition-all duration-300 sm:h-14 sm:w-14 flex items-center justify-center">
               <img
                 src="/assets/classic-car-logo.png"
                 alt="Classic Car Rental Logo"
@@ -88,7 +88,7 @@ export default function Navbar() {
             </div>
             <div>
               <div
-                className="font-montserrat text-sm font-bold leading-none tracking-wide transition-colors duration-300"
+                className="font-montserrat text-[11px] font-bold leading-tight tracking-wide transition-colors duration-300 sm:text-sm"
                 style={{ color: isLight ? '#2A1A0A' : '#D4A44A' }}
               >
                 CLASSIC CAR RENTAL
@@ -210,7 +210,7 @@ export default function Navbar() {
           {/* Mobile toggle */}
           <button
             onClick={() => setMenuOpen(!menuOpen)}
-            className="lg:hidden p-2 transition-colors"
+            className="lg:hidden rounded-xl p-3 transition-colors"
             style={{ color: isLight ? '#7B4A1E' : '#D4A44A' }}
           >
             {menuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
@@ -226,19 +226,19 @@ export default function Navbar() {
             animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
             transition={{ duration: 0.3 }}
-            className="lg:hidden border-t"
+            className="lg:hidden border-t overflow-hidden"
             style={{
               background: isLight ? 'rgba(248,243,234,0.99)' : 'rgba(13,13,13,0.99)',
               borderColor: isLight ? 'rgba(123,74,30,0.15)' : 'rgba(212,164,74,0.1)',
             }}
           >
-            <div className="px-4 py-6 flex flex-col gap-4">
+            <div className="mobile-scrollbar-safe flex max-h-[calc(100vh-76px)] flex-col gap-3 overflow-y-auto px-4 py-4">
               {navLinks.map(link =>
                 link.href.startsWith('/#') ? (
                   <button
                     key={link.label}
                     onClick={() => { handleNavClick(link.href); setMenuOpen(false); }}
-                    className="font-poppins text-sm font-medium text-left py-2 border-b transition-colors"
+                    className="min-h-11 w-full border-b py-3 text-left font-poppins text-sm font-medium transition-colors"
                     style={{ color: isLight ? '#3A2A1A' : '#D0D0D0', borderColor: 'rgba(123,74,30,0.1)' }}
                   >
                     {link.label}
@@ -247,7 +247,7 @@ export default function Navbar() {
                   <Link
                     key={link.label}
                     to={link.href}
-                    className="font-poppins text-sm font-medium py-2 border-b transition-colors"
+                    className="min-h-11 border-b py-3 font-poppins text-sm font-medium transition-colors"
                     style={{ color: isLight ? '#3A2A1A' : '#D0D0D0', borderColor: 'rgba(123,74,30,0.1)' }}
                   >
                     {link.label}
@@ -259,7 +259,7 @@ export default function Navbar() {
                   <Link to="/booking/dashboard" className="btn-gold text-sm justify-center mt-2">
                     <LayoutDashboard className="w-4 h-4" />Staff Panel
                   </Link>
-                  <button onClick={handleSignOut} className="text-red-400 text-sm font-montserrat text-center py-2">Sign Out</button>
+                  <button onClick={handleSignOut} className="min-h-11 text-center font-montserrat text-sm text-red-400">Sign Out</button>
                 </>
               ) : (
                 <>
@@ -285,3 +285,4 @@ export default function Navbar() {
     </motion.nav>
   );
 }
+

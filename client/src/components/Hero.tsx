@@ -35,21 +35,16 @@ export default function Hero() {
 
   return (
     <section
-      className="relative overflow-hidden"
+      className="relative hero-background lg:overflow-hidden"
       style={{
-        background: 'linear-gradient(135deg, #F8F3EA 0%, #F5EFE6 50%, #F0E8DC 100%)',
+        backgroundImage: `url(${heroIllustration}), linear-gradient(135deg, rgba(248, 245, 238, 0.24) 0%, rgba(248, 245, 238, 0.16) 50%, rgba(248, 245, 238, 0.18) 100%)`,
+        backgroundSize: 'cover, cover',
+        backgroundPosition: 'right center, right center',
+        backgroundRepeat: 'no-repeat, no-repeat',
+        backgroundAttachment: 'scroll',
+        backgroundOrigin: 'border-box',
       }}
     >
-      {/* Desktop-only hero artwork so mobile does not render the same image twice */}
-      <div
-        className="hidden lg:block absolute inset-0 pointer-events-none"
-        style={{
-          backgroundImage: `url(${heroIllustration})`,
-          backgroundRepeat: 'no-repeat',
-          backgroundPosition: 'center right',
-          backgroundSize: 'cover',
-        }}
-      />
       {/* Decorative botanical left (hidden on small screens) */}
       <div className="hidden md:block absolute top-0 bottom-0 pointer-events-none select-none overflow-hidden" style={{ left: '-36px', width: '140px' }}>
         <BotanicalLeft />
@@ -59,10 +54,10 @@ export default function Hero() {
         <BotanicalRight />
       </div>
 
-      <div className="relative z-10 max-w-7xl mx-auto px-8 sm:px-12 lg:px-16 pt-20 pb-8">
-        <div className="grid lg:grid-cols-2 gap-6 lg:gap-8 items-center min-h-[560px]">
+      <div className="relative z-10 mx-auto max-w-7xl px-4 pb-8 pt-20 sm:px-8 sm:pt-28 md:pt-40 lg:px-16 lg:pt-20">
+        <div className="grid items-center gap-6 py-4 lg:min-h-[560px] lg:grid-cols-2 lg:gap-8 lg:py-0">
           {/* Left Content */}
-          <div className="pr-0 lg:pr-8 -ml-4 lg:-ml-10 px-4 sm:px-6" style={{ maxWidth: '680px' }}>
+          <div className="px-0 pr-0 sm:px-2 lg:-ml-10 lg:px-4 lg:pr-8" style={{ maxWidth: '680px' }}>
             {/* Badge */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
@@ -90,11 +85,11 @@ export default function Hero() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.1 }}
             >
-              <h1 className="font-playfair leading-tight mb-3">
-                <span className="block text-4xl md:text-6xl lg:text-[64px] font-bold" style={{ color: '#1A1209' }}>
+              <h1 className="mb-3 break-words font-playfair leading-tight">
+                <span className="block text-3xl font-bold sm:text-4xl md:text-6xl lg:text-[64px]" style={{ color: '#1A1209' }}>
                   Classic Cars.
                 </span>
-                <span className="block text-4xl md:text-6xl lg:text-[64px] font-bold" style={{ color: '#1A1209' }}>
+                <span className="block text-3xl font-bold sm:text-4xl md:text-6xl lg:text-[64px]" style={{ color: '#1A1209' }}>
                   Extraordinary Experiences.
                 </span>
               </h1>
@@ -124,10 +119,10 @@ export default function Hero() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.3 }}
-              className="flex flex-wrap gap-4 mb-8"
+              className="mb-8 grid grid-cols-2 gap-4 md:grid-cols-4"
             >
               {features.map(({ icon: Icon, label, sub }) => (
-                <div key={label} className="flex flex-col items-center gap-1.5 w-24">
+                <div key={label} className="flex min-w-0 flex-col items-center gap-1.5 sm:w-24">
                   <div
                     className="w-12 h-12 rounded-full flex items-center justify-center border-2"
                     style={{ borderColor: '#7B4A1E', background: 'rgba(123,74,30,0.08)' }}
@@ -157,11 +152,11 @@ export default function Hero() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.4 }}
-              className="flex flex-wrap gap-4"
+              className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:gap-4"
             >
               <Link
                 to="/fleet"
-                className="inline-flex items-center gap-2 font-montserrat font-semibold text-[13px] tracking-wide px-6 py-3.5 text-white transition-all duration-300 hover:shadow-lg hover:opacity-90"
+                className="inline-flex w-full items-center justify-center gap-2 px-5 py-3.5 font-montserrat text-[13px] font-semibold tracking-wide text-white transition-all duration-300 hover:shadow-lg hover:opacity-90 sm:w-auto sm:px-6"
                 style={{ background: '#7B4A1E', borderRadius: '4px', letterSpacing: '0.06em' }}
               >
                 EXPLORE OUR FLEET
@@ -169,7 +164,7 @@ export default function Hero() {
               </Link>
               <button
                 onClick={scrollToContact}
-                className="inline-flex items-center gap-2 font-montserrat font-semibold text-[13px] tracking-wide px-6 py-3.5 transition-all duration-300 hover:bg-amber-900/10"
+                className="inline-flex w-full items-center justify-center gap-2 px-5 py-3.5 font-montserrat text-[13px] font-semibold tracking-wide transition-all duration-300 hover:bg-amber-900/10 sm:w-auto sm:px-6"
                 style={{
                   border: '1.5px solid #7B4A1E',
                   color: '#7B4A1E',
@@ -181,10 +176,6 @@ export default function Hero() {
                 CONTACT AGENT
               </button>
             </motion.div>
-          </div>
-          {/* Mobile image (show under lg) */}
-          <div className="lg:hidden w-full flex justify-center mt-8">
-            <img src={heroIllustration} alt="Palace and classic car" className="max-w-full h-auto object-contain" />
           </div>
 
           {/* Right - Palace + Car + Flowers (illustration for lg+) */}
@@ -259,7 +250,7 @@ export default function Hero() {
                   whileHover={{ scale: 1.03 }}
                   whileTap={{ scale: 0.97 }}
                   onClick={handleSearch}
-                  className="w-full md:w-auto flex items-center justify-center gap-2 font-montserrat font-bold text-sm text-white px-6 py-3.5 transition-all duration-300"
+                  className="flex w-full items-center justify-center gap-2 px-4 py-3.5 font-montserrat text-sm font-bold text-white transition-all duration-300 md:w-auto md:px-6"
                   style={{ background: '#7B4A1E', borderRadius: '8px', minWidth: '200px', letterSpacing: '0.04em' }}
                 >
                   <Search className="w-4 h-4" />
@@ -448,4 +439,7 @@ function BotanicalRight() {
     </svg>
   );
 }
+
+
+
 

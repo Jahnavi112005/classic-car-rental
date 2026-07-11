@@ -22,8 +22,13 @@ export default function Login() {
     if (err) {
       setError('Invalid email or password. Please try again.');
     } else {
-      // Redirect staff to the booking dashboard
-      navigate('/booking/dashboard');
+      const normalizedEmail = (email || '').trim().toLowerCase();
+      const isOwnerLogin = normalizedEmail === 'owner@classiccarrentals.in';
+      if (isOwnerLogin && profile?.role === 'owner') {
+        navigate('/owner/dashboard');
+      } else {
+        navigate('/booking/dashboard');
+      }
     }
   }
 
@@ -60,7 +65,7 @@ export default function Login() {
               <Crown className="w-8 h-8 text-cream" />
             </div>
             <h1 className="font-playfair text-2xl font-bold text-earth">Staff Login</h1>
-            <p className="text-stone font-poppins text-sm mt-1">Sign in using your Booking Staff account.</p>
+            <p className="text-stone font-poppins text-sm mt-1">Use your staff or owner account to open the dashboard.</p>
             <div className="w-12 h-0.5 bg-brown-gradient mx-auto mt-3" />
           </div>
 
@@ -141,7 +146,7 @@ export default function Login() {
 
           <div className="mt-6 text-center">
             <p className="text-stone font-poppins text-sm">
-              Only booking staff may sign in.
+              Owner access is enabled for owner@classiccarrentals.in.
             </p>
           </div>
         </motion.div>

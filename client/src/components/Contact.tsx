@@ -36,20 +36,20 @@ export default function Contact() {
   }
 
   return (
-    <section id="contact" className="py-24 px-4 bg-cream-dark">
+    <section id="contact" className="bg-cream-dark px-4 py-16 sm:py-20 lg:py-24">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          className="text-center mb-16"
+          className="mb-10 text-center sm:mb-16"
         >
           <div className="inline-flex items-center gap-2 border border-brown/30 bg-brown/5 rounded-full px-4 py-2 mb-6">
             <MessageSquare className="w-3.5 h-3.5 text-brown" />
             <span className="font-montserrat text-xs tracking-widest text-brown uppercase">Get In Touch</span>
           </div>
-          <h2 className="font-playfair text-4xl md:text-5xl font-bold text-earth mb-4">
+          <h2 className="mb-4 font-playfair text-3xl font-bold leading-tight text-earth sm:text-4xl md:text-5xl">
             Contact <span className="text-gradient-brown">Us</span>
           </h2>
           <div className="w-20 h-0.5 bg-gradient-to-r from-transparent via-brown to-transparent mx-auto mb-6" />
@@ -58,7 +58,7 @@ export default function Contact() {
           </p>
         </motion.div>
 
-        <div className="grid lg:grid-cols-2 gap-12">
+        <div className="grid gap-10 lg:grid-cols-2 lg:gap-12">
           {/* Left - Contact Info */}
           <motion.div
             initial={{ opacity: 0, x: -40 }}
@@ -132,7 +132,7 @@ export default function Contact() {
                   <p className="text-xs text-green-600 font-poppins">Instant response — we reply in minutes!</p>
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <a
                   href={waUrl('Hello Classic Car Rentals,\n\nI would like to book a vehicle.\nVehicle: \nPickup Date: \nDrop Date: \n\nPlease share availability and pricing.')}
                   target="_blank" rel="noopener noreferrer"
@@ -170,7 +170,7 @@ export default function Contact() {
             </div>
 
             {/* Social Links */}
-            <div className="flex items-center gap-4 mt-8">
+            <div className="mt-8 flex flex-wrap items-center gap-3 sm:gap-4">
               <span className="text-stone font-poppins text-sm">Follow us:</span>
               {['Facebook', 'Instagram', 'YouTube', 'WhatsApp'].map(s => (
                 <motion.a
@@ -192,7 +192,7 @@ export default function Contact() {
             viewport={{ once: true }}
             transition={{ duration: 0.7 }}
           >
-            <div className="luxury-card p-8">
+            <div className="luxury-card p-4 sm:p-6 lg:p-8">
               <h3 className="font-playfair text-2xl font-bold text-earth mb-6">
                 Send an <span className="text-gradient-brown">Inquiry</span>
               </h3>
@@ -219,7 +219,7 @@ export default function Contact() {
                 </motion.div>
               ) : (
                 <form onSubmit={handleSubmit} className="space-y-5">
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <div>
                       <label className="block text-xs font-montserrat font-semibold text-brown uppercase tracking-wider mb-2">
                         Your Name
@@ -305,4 +305,5 @@ export default function Contact() {
     </section>
   );
 }
+
 

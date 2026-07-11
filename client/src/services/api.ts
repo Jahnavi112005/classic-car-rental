@@ -5,14 +5,9 @@ type CustomerPayload = {
   name: string;
   email?: string;
   phone?: string;
-  whatsapp?: string;
   address?: string;
-  city?: string;
-  state?: string;
-  country?: string;
-  pinCode?: string;
   documentNumber?: string;
-  documentType?: string;
+  country?: string;
 };
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
@@ -64,12 +59,8 @@ export const authApi = {
 };
 
 export const vehicleApi = {
-  async list(params?: Record<string, string>) {
-    const { data } = await api.get<Car[]>('/vehicles', { params });
-    return data;
-  },
-  async create(payload: Partial<Car>) {
-    const { data } = await api.post<Car>('/vehicles', payload);
+  async list() {
+    const { data } = await api.get<Car[]>('/vehicles');
     return data;
   },
   async get(id: string) {
@@ -86,13 +77,6 @@ export const vehicleApi = {
   },
   async remove(id: string | number) {
     await api.delete(`/vehicles/${id}`);
-  },
-  async restore(id: string | number) {
-    const { data } = await api.patch<Car>(`/vehicles/${id}/restore`);
-    return data;
-  },
-  async hardDelete(id: string | number) {
-    await api.delete(`/vehicles/${id}/hard`);
   },
 };
 
@@ -153,18 +137,6 @@ export const bookingActions = {
     const { data } = await api.get(`/bookings/${id}/audit`);
     return data;
   },
-  async approve(id: string) {
-    const { data } = await api.patch<Booking>(`/bookings/${id}/approve`);
-    return data;
-  },
-  async reject(id: string) {
-    const { data } = await api.patch<Booking>(`/bookings/${id}/reject`);
-    return data;
-  },
-  async complete(id: string) {
-    const { data } = await api.patch<Booking>(`/bookings/${id}/complete`);
-    return data;
-  },
 };
 
 export const inquiryApi = {
@@ -178,6 +150,40 @@ export const inquiryApi = {
   },
   async update(id: string, payload: Partial<Inquiry>) {
     const { data } = await api.patch<Inquiry>(`/inquiries/${id}`, payload);
+    return data;
+  },
+};
+
+export const popupApi = {
+  async list() {
+    const { data } = await api.get<Popup[]>('/popups');
+    return data;
+  },
+  async active() {
+    const { data } = await api.get<Popup | null>('/popups/active');
+    return data;
+  },
+  async create(payload: Partial<Popup>) {
+    const { data } = await api.post<Popup>('/popups', payload);
+    return data;
+  },
+  async update(id: string, payload: Partial<Popup>) {
+    const { data } = await api.patch<Popup>(`/popups/${id}`, payload);
+    return data;
+  },
+  async remove(id: string) {
+    await api.delete(`/popups/${id}`);
+  },
+};
+
+export const uploadApi = {
+  async image(file: File, folder: string) {
+    const formData = new FormData();
+    formData.append('image', file);
+    formData.append('folder', folder);
+    const { data } = await api.post<{ url: string }>('/upload', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
     return data;
   },
 };

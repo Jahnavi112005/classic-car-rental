@@ -115,14 +115,14 @@ export default function InquiryModal({ open, onClose, preselectedVehicle }: Inqu
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.92, y: 20 }}
             transition={{ duration: 0.3 }}
-            className="relative w-full max-w-lg rounded-2xl overflow-hidden shadow-luxury z-10"
+            className="relative z-10 max-h-[92vh] w-full max-w-lg overflow-hidden rounded-2xl shadow-luxury"
             style={{ background: '#FFFFFF', border: '1px solid rgba(123,74,30,0.2)' }}
           >
             {/* Brown top bar */}
             <div className="h-1" style={{ background: 'linear-gradient(90deg, #7B4A1E, #5C3715)' }} />
 
             {/* Header */}
-            <div className="flex items-center justify-between px-6 py-4 border-b" style={{ borderColor: 'rgba(123,74,30,0.1)' }}>
+            <div className="flex items-center justify-between gap-3 border-b px-4 py-4 sm:px-6" style={{ borderColor: 'rgba(123,74,30,0.1)' }}>
               <div className="flex items-center gap-3">
                 <div className="w-9 h-9 rounded-xl bg-brown/10 border border-brown/20 flex items-center justify-center">
                   <MessageSquare className="w-4 h-4 text-brown" />
@@ -138,7 +138,7 @@ export default function InquiryModal({ open, onClose, preselectedVehicle }: Inqu
             </div>
 
             {/* Body */}
-            <div className="p-6 max-h-[75vh] overflow-y-auto bg-cream-light">
+            <div className="mobile-scrollbar-safe max-h-[calc(92vh-76px)] overflow-y-auto bg-cream-light p-4 sm:p-6">
               {success ? (
                 <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="text-center py-8">
                   <div className="w-20 h-20 rounded-full bg-green-100 border border-green-300 flex items-center justify-center mx-auto mb-4">
@@ -161,7 +161,7 @@ export default function InquiryModal({ open, onClose, preselectedVehicle }: Inqu
                 </motion.div>
               ) : (
                 <form onSubmit={handleSubmit} className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <div>
                       <label className="block text-xs font-montserrat font-semibold text-brown uppercase tracking-wider mb-1.5">Name *</label>
                       <input type="text" value={form.name} onChange={e => handleChange('name', e.target.value)} placeholder="Your full name" required className="input-luxury text-sm py-2.5" />
@@ -185,7 +185,7 @@ export default function InquiryModal({ open, onClose, preselectedVehicle }: Inqu
                     </select>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <div>
                       <label className="block text-xs font-montserrat font-semibold text-brown uppercase tracking-wider mb-1.5">Pickup Date</label>
                       <input type="date" value={form.pickup_date} min={today} onChange={e => handleChange('pickup_date', e.target.value)} className="input-luxury text-sm py-2.5" />
@@ -205,7 +205,7 @@ export default function InquiryModal({ open, onClose, preselectedVehicle }: Inqu
                     <p className="text-red-500 text-xs font-poppins bg-red-50 border border-red-200 rounded-lg px-3 py-2">{error}</p>
                   )}
 
-                  <div className="flex gap-3 pt-1">
+                  <div className="grid gap-3 pt-1 sm:grid-cols-[1fr_auto]">
                     <motion.button
                       type="submit"
                       disabled={loading}
@@ -224,7 +224,7 @@ export default function InquiryModal({ open, onClose, preselectedVehicle }: Inqu
                       href={`https://wa.me/919036444477?text=${encodeURIComponent(`Hello Classic Car Rentals,\n\nI would like to book a vehicle.\nVehicle: ${form.vehicle_interested || 'Not selected'}\nPickup Date: ${form.pickup_date}\nDrop Date: ${form.drop_date}\n\nPlease share availability and pricing.`)}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="flex items-center gap-2 font-montserrat font-semibold text-xs text-white px-4 py-3 rounded-xl transition-all hover:opacity-90"
+                      className="flex min-h-11 items-center justify-center gap-2 rounded-xl px-4 py-3 font-montserrat text-xs font-semibold text-white transition-all hover:opacity-90"
                       style={{ background: '#25D366' }}
                     >
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="white"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12.05 2C6.495 2 2 6.496 2 12.05c0 1.861.484 3.607 1.334 5.122L2 22l4.962-1.302A10.018 10.018 0 0012.05 22c5.555 0 10.05-4.495 10.05-10.05C22.1 6.496 17.605 2 12.05 2zm0 18.35a8.295 8.295 0 01-4.232-1.157l-.304-.18-3.146.826.838-3.074-.198-.315a8.291 8.291 0 01-1.271-4.45c0-4.589 3.734-8.323 8.313-8.323 4.58 0 8.313 3.734 8.313 8.323 0 4.59-3.733 8.35-8.313 8.35z" fill="white"/></svg>
@@ -240,4 +240,5 @@ export default function InquiryModal({ open, onClose, preselectedVehicle }: Inqu
     </AnimatePresence>
   );
 }
+
 

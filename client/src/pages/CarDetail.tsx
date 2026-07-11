@@ -181,7 +181,7 @@ export default function CarDetail() {
         </div>
 
         <div className="max-w-7xl mx-auto px-4 pb-20">
-          <div className="grid lg:grid-cols-2 gap-12">
+          <div className="grid gap-8 lg:grid-cols-2 lg:gap-12">
             {/* Left - Car Details */}
             <div>
               {/* Image */}
@@ -194,13 +194,13 @@ export default function CarDetail() {
                   vehicle={car}
                   alt={car.name}
                   wrapperClassName="rounded-2xl overflow-hidden mb-6 border border-brown/20"
-                  wrapperStyle={{ height: '360px' }}
+                  wrapperStyle={{ height: 'clamp(240px, 62vw, 360px)' }}
                   imgClassName="w-full h-full object-contain"
                 />
                 <div className="absolute top-4 left-4">
                   <span className="font-montserrat text-xs font-semibold px-3 py-1.5 bg-brown text-cream rounded-full">{car.category}</span>
                 </div>
-                <div className="absolute bottom-4 left-4 right-4 flex items-center justify-between">
+                <div className="absolute bottom-4 left-4 right-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                   <div className="flex items-center gap-1">
                     <Star className="w-4 h-4 text-brown-light fill-brown-light" />
                     <span className="text-white font-semibold">{car.rating}</span>
@@ -219,7 +219,7 @@ export default function CarDetail() {
                 <p className="text-stone font-poppins mb-6">{car.brand} · {car.model} · {car.year}</p>
 
                 {/* Specs */}
-                <div className="grid grid-cols-3 gap-4 mb-8">
+                <div className="mb-8 grid grid-cols-1 gap-3 min-[360px]:grid-cols-3 sm:grid-cols-3 sm:gap-4">
                   {[
                     { icon: Fuel, label: 'Fuel', value: car.fuel_type },
                     { icon: Settings, label: 'Transmission', value: car.transmission },
@@ -243,7 +243,7 @@ export default function CarDetail() {
                 {car.features.length > 0 && (
                   <div className="luxury-card p-6 mb-6">
                     <h3 className="font-playfair text-lg font-bold text-brown mb-4">Features & Amenities</h3>
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                       {car.features.map(f => (
                         <div key={f} className="flex items-center gap-2">
                           <CheckCircle className="w-4 h-4 text-brown flex-shrink-0" />
@@ -285,10 +285,10 @@ export default function CarDetail() {
                 initial={{ opacity: 0, x: 40 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: 0.3 }}
-                className="luxury-card p-8 sticky top-24"
+                className="luxury-card p-4 sm:p-6 lg:sticky lg:top-24 lg:p-8"
               >
                 {/* Price header */}
-                <div className="flex items-center justify-between mb-6">
+                <div className="mb-6 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                   <div>
                     <span className="font-playfair text-3xl font-bold text-gradient-brown">₹{car.price_per_day.toLocaleString()}</span>
                     <span className="text-stone font-poppins"> /day</span>
@@ -335,7 +335,7 @@ export default function CarDetail() {
                         </label>
                         <input type="text" value={bookForm.dropLocation} onChange={e => setBookForm(p => ({ ...p, dropLocation: e.target.value }))} placeholder="Same as pickup" className="input-luxury" />
                       </div>
-                      <div className="grid grid-cols-2 gap-4">
+                      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                         <div>
                           <label className="block text-xs font-montserrat font-semibold text-brown uppercase tracking-wider mb-2">
                             <Calendar className="w-3 h-3 inline mr-1" />Pickup Date
@@ -349,7 +349,7 @@ export default function CarDetail() {
                           <input type="date" value={bookForm.dropDate} min={bookForm.pickupDate} onChange={e => setBookForm(p => ({ ...p, dropDate: e.target.value }))} className="input-luxury" />
                         </div>
                       </div>
-                      <div className="grid grid-cols-2 gap-4">
+                      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                         <div>
                           <label className="block text-xs font-montserrat font-semibold text-brown uppercase tracking-wider mb-2">
                             <Phone className="w-3 h-3 inline mr-1" />Phone Number
@@ -439,7 +439,7 @@ export default function CarDetail() {
                             {getCountrySupportText(documentForm.country)?.slice(1).map(item => <p key={item}>{item}</p>)}
                           </div>
                         ) : null}
-                        <label className="flex items-center gap-3 rounded-2xl border border-[#B67C52]/20 bg-white px-4 py-3 cursor-pointer text-sm text-[#7B4A1E] shadow-sm transition hover:border-[#B67C52] mt-4">
+                        <label className="mt-4 flex min-h-12 cursor-pointer items-center gap-3 rounded-2xl border border-[#B67C52]/20 bg-white px-4 py-3 text-sm text-[#7B4A1E] shadow-sm transition hover:border-[#B67C52]">
                           <FileText className="w-5 h-5" />
                           <span>{documentForm.governmentId?.name || 'Upload document (JPG/PNG/PDF, max 10MB)'}</span>
                           <input
@@ -506,7 +506,7 @@ export default function CarDetail() {
                       ) : ((car.status || (car.availability ? 'available' : 'booked')) !== 'available') ? 'Not Available' : 'Verify & Book'}
                     </motion.button>
 
-                    <div className="flex gap-2">
+                    <div className="grid gap-2 sm:grid-cols-2">
                       <a href="tel:9036444477" className="flex-1 btn-outline-gold justify-center py-3" style={{ borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px' }}>
                         <Phone className="w-4 h-4" />
                         Call Us
@@ -535,6 +535,8 @@ export default function CarDetail() {
     </div>
   );
 }
+
+
 
 
 

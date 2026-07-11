@@ -20,10 +20,8 @@ import { api, bookingApi, bookingActions, inquiryApi, vehicleApi } from '../serv
 import { Booking, Car as CarType, Inquiry } from '../types';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
-import BookingDetailsModal from '../components/BookingDetailsModal';
 import { whatsAppUrl } from '../utils/whatsapp';
 import { getVehicleImagePath } from '../utils/vehicleImage';
-import { getAccountDisplayName, getRoleLabel } from '../utils/displayName';
 import { useAuth } from '../context/AuthContext';
 
 const statusPill = {
@@ -49,43 +47,6 @@ const dashboardSections = [
 ];
 
 const vehicleStatuses = ['available', 'booked', 'maintenance'];
-const vehicleCategories: CarType['category'][] = ['Hatchback', 'Sedan', 'SUV', 'Luxury', 'Premium Luxury'];
-const vehicleFuelTypes: CarType['fuel_type'][] = ['Petrol', 'Diesel', 'Electric', 'Hybrid', 'CNG'];
-const vehicleTransmissions: CarType['transmission'][] = ['Manual', 'Automatic'];
-const DASHBOARD_CACHE_KEY = 'booking_dashboard_cache_v1';
-const DASHBOARD_CACHE_TTL_MS = 60 * 1000;
-
-type DashboardCache = {
-  ts: number;
-  bookings: Booking[];
-  vehicles: CarType[];
-  deletedVehicles: CarType[];
-};
-
-function readDashboardCache(): DashboardCache | null {
-  try {
-    const raw = sessionStorage.getItem(DASHBOARD_CACHE_KEY);
-    if (!raw) return null;
-    const parsed = JSON.parse(raw) as DashboardCache;
-    if (!parsed || !Array.isArray(parsed.bookings) || !Array.isArray(parsed.vehicles) || !Array.isArray(parsed.deletedVehicles)) {
-      return null;
-    }
-    return parsed;
-  } catch {
-    return null;
-  }
-}
-
-function writeDashboardCache(payload: Omit<DashboardCache, 'ts'>) {
-  try {
-    sessionStorage.setItem(
-      DASHBOARD_CACHE_KEY,
-      JSON.stringify({ ...payload, ts: Date.now() } satisfies DashboardCache)
-    );
-  } catch {
-    // Ignore storage failures.
-  }
-}
 
 export default function BookingDashboard() {
   const location = useLocation();
@@ -93,7 +54,6 @@ export default function BookingDashboard() {
   const { signOut, profile } = useAuth();
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [vehicles, setVehicles] = useState<CarType[]>([]);
-  const [deletedVehicles, setDeletedVehicles] = useState<CarType[]>([]);
   const [fleetStatusChanges, setFleetStatusChanges] = useState<Record<string, string>>({});
   const [updatingStatus, setUpdatingStatus] = useState<Record<string, boolean>>({});
   const [complaints, setComplaints] = useState<Inquiry[]>([]);
@@ -102,41 +62,14 @@ export default function BookingDashboard() {
   const [filterStatus, setFilterStatus] = useState('');
   const [search, setSearch] = useState('');
   const [selectedVehicle, setSelectedVehicle] = useState<string | null>(null);
-  const [vehicleDrafts, setVehicleDrafts] = useState<Record<string, {
-    name: string;
-    category: CarType['category'];
-    year: string;
-    fuel_type: CarType['fuel_type'];
-    transmission: CarType['transmission'];
-    seats: string;
-    description: string;
-  }>>({});
-  const [fleetView, setFleetView] = useState<'active' | 'trash'>('active');
-  const [confirmAction, setConfirmAction] = useState<null | {
-    mode: 'soft' | 'hard';
-    vehicleId: string;
-    vehicleName: string;
-  }>(null);
-  const [selectedBookingId, setSelectedBookingId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [statusUpdate, setStatusUpdate] = useState<Record<string, string>>({});
   const [toast, setToast] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
   useEffect(() => {
-    const cached = readDashboardCache();
-    if (cached) {
-      setBookings(cached.bookings || []);
-      setVehicles((cached.vehicles || []).filter(v => !v.isDeleted));
-      setDeletedVehicles((cached.deletedVehicles || []).filter(v => v.isDeleted));
-      setFleetStatusChanges((cached.vehicles || []).reduce((acc, vehicle) => ({
-        ...acc,
-        [String(vehicle.id)]: vehicle.status || 'available',
-      }), {}));
-      setLoading(false);
-    }
-
-    fetchData(!cached, { force: !cached });
-    return;
+    fetchData();
+    const interval = window.setInterval(fetchData, 15000);
+    return () => window.clearInterval(interval);
   }, []);
 
   useEffect(() => {
@@ -156,46 +89,17 @@ export default function BookingDashboard() {
     return () => window.clearTimeout(timer);
   }, [toast]);
 
-  async function fetchData(showLoading = true, options?: { force?: boolean }) {
+  async function fetchData(showLoading = true) {
     if (showLoading) setLoading(true);
-
-    const cached = readDashboardCache();
-    const isCacheFresh = !!cached && Date.now() - cached.ts < DASHBOARD_CACHE_TTL_MS;
-    if (!options?.force && isCacheFresh) {
-      setBookings(cached.bookings || []);
-      setVehicles((cached.vehicles || []).filter(v => !v.isDeleted));
-      setDeletedVehicles((cached.deletedVehicles || []).filter(v => v.isDeleted));
-      setFleetStatusChanges((cached.vehicles || []).reduce((acc, vehicle) => ({
-        ...acc,
-        [String(vehicle.id)]: vehicle.status || 'available',
-      }), {}));
-      if (showLoading) setLoading(false);
-      return;
-    }
-
     try {
-      const [bookingList, vehicleList, deletedList] = await Promise.all([
-        bookingApi.list(),
-        vehicleApi.list(),
-        vehicleApi.list({ deletedOnly: 'true' }),
-      ]);
+      const [bookingList, vehicleList] = await Promise.all([bookingApi.list(), vehicleApi.list()]);
       setBookings(bookingList || []);
       const activeVehicles = (vehicleList || []).filter(v => !v.isDeleted);
       setVehicles(activeVehicles);
-      setDeletedVehicles((deletedList || []).filter(v => v.isDeleted));
       setFleetStatusChanges(activeVehicles.reduce((acc, vehicle) => ({
         ...acc,
         [String(vehicle.id)]: vehicle.status || 'available',
       }), {}));
-
-      writeDashboardCache({
-        bookings: bookingList || [],
-        vehicles: activeVehicles,
-        deletedVehicles: (deletedList || []).filter(v => v.isDeleted),
-      });
-      if (selectedVehicle && ![...activeVehicles, ...(deletedList || [])].some(v => String(v.id) === selectedVehicle)) {
-        setSelectedVehicle(null);
-      }
     } catch (err) {
       console.error('Failed to load booking dashboard data:', err);
       setToast({ type: 'error', message: 'Unable to load dashboard data. Please try again later.' });
@@ -245,91 +149,14 @@ export default function BookingDashboard() {
   }
 
   async function handleFleetStatusUpdate(id: string, newStatus: string) {
-    const targetVehicle = vehicles.find(vehicle => String(vehicle.id) === id);
-    if (!targetVehicle) return;
-
-    const previousStatus = targetVehicle.status || 'available';
-    const draft = vehicleDrafts[id];
-
-    const hasDetailChanges = !!draft && (
-      draft.name.trim() !== targetVehicle.name ||
-      draft.category !== targetVehicle.category ||
-      draft.year.trim() !== String(targetVehicle.year || '') ||
-      draft.fuel_type !== targetVehicle.fuel_type ||
-      draft.transmission !== targetVehicle.transmission ||
-      String(draft.seats).trim() !== String(targetVehicle.seats || '') ||
-      draft.description.trim() !== (targetVehicle.description || '').trim()
-    );
-
-    if (newStatus === previousStatus && !hasDetailChanges) {
-      setToast({ type: 'success', message: 'No changes to update.' });
-      return;
-    }
-
+    const previousStatus = vehicles.find(vehicle => String(vehicle.id) === id)?.status || 'available';
+    if (newStatus === previousStatus) return;
     setUpdatingStatus(prev => ({ ...prev, [id]: true }));
     try {
-      const draftYear = draft?.year?.trim() || String(targetVehicle.year || '');
-      const draftSeats = Number(draft?.seats);
-      const payload: Partial<CarType> = {
-        status: newStatus as CarType['status'],
-        availability: newStatus === 'available',
-        name: draft?.name?.trim() || targetVehicle.name,
-        category: (draft?.category || targetVehicle.category) as CarType['category'],
-        year: draftYear,
-        yearRange: draftYear,
-        fuel_type: (draft?.fuel_type || targetVehicle.fuel_type) as CarType['fuel_type'],
-        transmission: (draft?.transmission || targetVehicle.transmission) as CarType['transmission'],
-        seats: Number.isFinite(draftSeats) && draftSeats > 0 ? draftSeats : targetVehicle.seats,
-        description: draft?.description?.trim() || targetVehicle.description,
-      };
-
-      const updatedVehicle = await vehicleApi.update(id, {
-        ...payload,
-      });
-      setVehicles(prev => prev.map(vehicle => {
-        if (String(vehicle.id) !== id) return vehicle;
-        return {
-          ...vehicle,
-          ...payload,
-          ...updatedVehicle,
-          status: (updatedVehicle?.status || newStatus) as CarType['status'],
-          availability: typeof updatedVehicle?.availability === 'boolean' ? updatedVehicle.availability : newStatus === 'available',
-          updated_at: updatedVehicle?.updated_at || new Date().toISOString(),
-        };
-      }));
-      setFleetStatusChanges(prev => ({
-        ...prev,
-        [id]: (updatedVehicle?.status || newStatus) as string,
-      }));
-      setVehicleDrafts(prev => ({
-        ...prev,
-        [id]: {
-          name: updatedVehicle?.name || payload.name || targetVehicle.name,
-          category: (updatedVehicle?.category || payload.category || targetVehicle.category) as CarType['category'],
-          year: String(updatedVehicle?.year || payload.year || targetVehicle.year || ''),
-          fuel_type: (updatedVehicle?.fuel_type || payload.fuel_type || targetVehicle.fuel_type) as CarType['fuel_type'],
-          transmission: (updatedVehicle?.transmission || payload.transmission || targetVehicle.transmission) as CarType['transmission'],
-          seats: String(updatedVehicle?.seats || payload.seats || targetVehicle.seats || ''),
-          description: updatedVehicle?.description || payload.description || targetVehicle.description || '',
-        },
-      }));
-      setToast({ type: 'success', message: 'Vehicle updated successfully.' });
-
-      const activeVehicles = vehicles.map(vehicle => {
-        if (String(vehicle.id) !== id) return vehicle;
-        return {
-          ...vehicle,
-          ...updatedVehicle,
-          status: (updatedVehicle?.status || newStatus) as CarType['status'],
-          availability: typeof updatedVehicle?.availability === 'boolean' ? updatedVehicle.availability : newStatus === 'available',
-          updated_at: updatedVehicle?.updated_at || new Date().toISOString(),
-        };
-      });
-      writeDashboardCache({
-        bookings,
-        vehicles: activeVehicles,
-        deletedVehicles,
-      });
+      await vehicleApi.updateStatus(id, newStatus);
+      setVehicles(prev => prev.map(vehicle => vehicle.id === id ? { ...vehicle, status: newStatus, availability: newStatus === 'available' } : vehicle));
+      setToast({ type: 'success', message: 'Fleet status updated successfully.' });
+      await fetchData(false);
     } catch (err) {
       setFleetStatusChanges(prev => ({ ...prev, [id]: previousStatus }));
       const serverMessage = err?.response?.data?.message || err?.message || 'Unable to update fleet status. Please try again.';
@@ -340,16 +167,11 @@ export default function BookingDashboard() {
   }
 
   async function softDeleteVehicle(id: string) {
-    const vehicleName = [...vehicles, ...deletedVehicles].find(v => String(v.id) === id)?.name || 'this vehicle';
-    setConfirmAction({ mode: 'soft', vehicleId: id, vehicleName });
-  }
-
-  async function performSoftDelete(id: string) {
     setUpdatingStatus(prev => ({ ...prev, [id]: true }));
     try {
       await vehicleApi.update(id, { isDeleted: true });
-      setToast({ type: 'success', message: 'Vehicle moved to Trash. You can restore it anytime.' });
-      await fetchData(false, { force: true });
+      setToast({ type: 'success', message: 'Vehicle removed from fleet.' });
+      await fetchData(false);
     } catch (err) {
       setToast({ type: 'error', message: 'Unable to remove vehicle. Please try again.' });
     } finally {
@@ -357,129 +179,10 @@ export default function BookingDashboard() {
     }
   }
 
-  async function restoreVehicle(id: string) {
-    setUpdatingStatus(prev => ({ ...prev, [`restore-${id}`]: true }));
-    try {
-      await vehicleApi.restore(id);
-      setToast({ type: 'success', message: 'Vehicle restored to active fleet.' });
-      await fetchData(false, { force: true });
-    } catch {
-      setToast({ type: 'error', message: 'Unable to restore vehicle. Please try again.' });
-    } finally {
-      setUpdatingStatus(prev => ({ ...prev, [`restore-${id}`]: false }));
-    }
-  }
-
-  async function hardDeleteVehicle(id: string) {
-    const vehicleName = [...vehicles, ...deletedVehicles].find(v => String(v.id) === id)?.name || 'this vehicle';
-    setConfirmAction({ mode: 'hard', vehicleId: id, vehicleName });
-  }
-
-  async function performHardDelete(id: string) {
-    setUpdatingStatus(prev => ({ ...prev, [`hard-${id}`]: true }));
-    try {
-      await vehicleApi.hardDelete(id);
-      setToast({ type: 'success', message: 'Vehicle permanently deleted.' });
-      await fetchData(false, { force: true });
-    } catch {
-      setToast({ type: 'error', message: 'Unable to permanently delete vehicle. Please try again.' });
-    } finally {
-      setUpdatingStatus(prev => ({ ...prev, [`hard-${id}`]: false }));
-    }
-  }
-
-  async function handleConfirmAction() {
-    if (!confirmAction) return;
-    if (confirmAction.mode === 'soft') {
-      await performSoftDelete(confirmAction.vehicleId);
-    } else {
-      await performHardDelete(confirmAction.vehicleId);
-    }
-    setConfirmAction(null);
-  }
-
-  function handleViewVehicleDetails(vehicleId: string) {
-    if (selectedVehicle === vehicleId) {
-      setSelectedVehicle(null);
-      return;
-    }
-
-    const vehicle = [...vehicles, ...deletedVehicles].find(v => String(v.id) === vehicleId);
-    if (vehicle) {
-      setVehicleDrafts(prev => ({
-        ...prev,
-        [vehicleId]: prev[vehicleId] || {
-          name: vehicle.name,
-          category: vehicle.category,
-          year: String(vehicle.year || ''),
-          fuel_type: vehicle.fuel_type,
-          transmission: vehicle.transmission,
-          seats: String(vehicle.seats || ''),
-          description: vehicle.description || '',
-        },
-      }));
-    }
-
-    setSelectedVehicle(vehicleId);
-  }
-
-  function updateVehicleDraft<K extends 'name' | 'category' | 'year' | 'fuel_type' | 'transmission' | 'seats' | 'description'>(
-    vehicleId: string,
-    key: K,
-    value: string
-  ) {
-    const vehicle = [...vehicles, ...deletedVehicles].find(v => String(v.id) === vehicleId);
-    if (!vehicle) return;
-    setVehicleDrafts(prev => ({
-      ...prev,
-      [vehicleId]: {
-        name: prev[vehicleId]?.name ?? vehicle.name,
-        category: (prev[vehicleId]?.category ?? vehicle.category) as CarType['category'],
-        year: prev[vehicleId]?.year ?? String(vehicle.year || ''),
-        fuel_type: (prev[vehicleId]?.fuel_type ?? vehicle.fuel_type) as CarType['fuel_type'],
-        transmission: (prev[vehicleId]?.transmission ?? vehicle.transmission) as CarType['transmission'],
-        seats: prev[vehicleId]?.seats ?? String(vehicle.seats || ''),
-        description: prev[vehicleId]?.description ?? vehicle.description ?? '',
-        [key]: value,
-      },
-    }));
-  }
-
-  function normalizePhoneNumber(phone?: string) {
-    const digits = String(phone || '').replace(/\D/g, '');
-    if (!digits) return '';
-    if (digits.length === 10) return `+91${digits}`;
-    if (digits.startsWith('91')) return `+${digits}`;
-    return `+${digits}`;
-  }
-
-  function getPhoneLink(phone?: string) {
-    const digits = String(phone || '').replace(/\D/g, '');
-    if (!digits) return '';
-    return `tel:${digits.length === 10 ? `+91${digits}` : `+${digits}`}`;
-  }
-
-  function getWhatsAppLink(phone?: string) {
-    const digits = String(phone || '').replace(/\D/g, '');
-    if (!digits) return '';
-    const normalized = digits.startsWith('91') ? digits : `91${digits}`;
-    return `https://wa.me/${normalized}`;
-  }
-
   async function handleBookingAction(id: string, action: 'approve' | 'reject' | 'completed') {
     setLoading(true);
-    try {
-      if (action === 'approve') await bookingApi.approve(id);
-      if (action === 'reject') await bookingApi.reject(id);
-      if (action === 'completed') await bookingApi.complete(id);
-      setToast({ type: 'success', message: `Booking ${action === 'approve' ? 'approved' : action === 'reject' ? 'rejected' : 'completed'} successfully.` });
-    } catch (err) {
-      const message = err?.response?.data?.message || err?.message || 'Unable to update booking status.';
-      setToast({ type: 'error', message });
-    } finally {
-      await fetchData(true, { force: true });
-      setLoading(false);
-    }
+    await bookingActions.action(id, { action });
+    await fetchData();
   }
 
   if (loading) {
@@ -498,7 +201,6 @@ export default function BookingDashboard() {
   return (
     <div className="min-h-screen bg-[#0D0D0F] text-white">
       <Navbar />
-        <BookingDetailsModal id={selectedBookingId} onClose={() => setSelectedBookingId(null)} />
       <div className="pt-24 px-4 sm:px-6 lg:px-8">
         <div className="grid lg:grid-cols-[280px_1fr] gap-6">
           <aside className="rounded-[32px] border border-white/10 bg-[#111315]/80 p-6 shadow-[0_30px_80px_-40px_rgba(0,0,0,0.55)] backdrop-blur-xl">
@@ -626,14 +328,8 @@ export default function BookingDashboard() {
                             >
                               Complete
                             </button>
-                            <button
-                              onClick={() => setSelectedBookingId(booking.id)}
-                              className="w-full rounded-2xl bg-[#3B82F6] px-3 py-2 text-xs font-semibold text-white hover:bg-[#2563EB]"
-                            >
-                              View Details
-                            </button>
                             <a
-                              href={getWhatsAppLink(booking.customers?.whatsapp || booking.customers?.phone || booking.profiles?.phone || '')}
+                              href={whatsAppUrl(booking.customers?.phone || booking.profiles?.phone || '')}
                               target="_blank"
                               rel="noreferrer"
                               className="w-full inline-flex items-center justify-center gap-2 rounded-2xl border border-white/10 bg-[#0F1014] px-3 py-2 text-xs font-semibold text-[#D9D1B1] hover:bg-white/5"
@@ -641,7 +337,7 @@ export default function BookingDashboard() {
                               <MessageSquare className="w-4 h-4" /> WhatsApp
                             </a>
                             <a
-                              href={getPhoneLink(booking.customers?.phone || booking.profiles?.phone || '')}
+                              href={`tel:${booking.customers?.phone || booking.profiles?.phone || ''}`}
                               className="w-full inline-flex items-center justify-center gap-2 rounded-2xl border border-white/10 bg-[#0F1014] px-3 py-2 text-xs font-semibold text-[#D9D1B1] hover:bg-white/5"
                             >
                               <Phone className="w-4 h-4" /> Call
@@ -662,25 +358,9 @@ export default function BookingDashboard() {
                     <div className="text-sm uppercase tracking-[0.2em] text-[#C7B894] mb-2">Vehicle Availability</div>
                     <h2 className="text-2xl font-semibold">Fleet Management</h2>
                   </div>
-                  <div className="flex items-center gap-3">
-                    <div className="inline-flex rounded-3xl border border-white/10 bg-[#111315] p-1">
-                      <button
-                        onClick={() => setFleetView('active')}
-                        className={`rounded-3xl px-4 py-2 text-xs font-semibold transition ${fleetView === 'active' ? 'bg-white/10 text-white' : 'text-[#B8B3A0]'}`}
-                      >
-                        Active ({vehicles.length})
-                      </button>
-                      <button
-                        onClick={() => setFleetView('trash')}
-                        className={`rounded-3xl px-4 py-2 text-xs font-semibold transition ${fleetView === 'trash' ? 'bg-white/10 text-white' : 'text-[#B8B3A0]'}`}
-                      >
-                        Trash ({deletedVehicles.length})
-                      </button>
-                    </div>
-                    <button onClick={() => fetchData(true, { force: true })} className="inline-flex items-center gap-2 rounded-3xl border border-white/10 bg-[#111315] px-4 py-3 text-sm text-white hover:bg-white/5">
-                      <RefreshCw className="w-4 h-4" /> Refresh Fleet
-                    </button>
-                  </div>
+                  <button onClick={() => fetchData()} className="inline-flex items-center gap-2 rounded-3xl border border-white/10 bg-[#111315] px-4 py-3 text-sm text-white hover:bg-white/5">
+                    <RefreshCw className="w-4 h-4" /> Refresh Fleet
+                  </button>
                 </div>
 
                 {toast && (
@@ -701,178 +381,85 @@ export default function BookingDashboard() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-white/10">
-                      {(fleetView === 'active' ? filteredVehicles : deletedVehicles).map(vehicle => {
+                      {filteredVehicles.map(vehicle => {
                         const vehicleId = String(vehicle.id);
                         const selectedStatus = fleetStatusChanges[vehicleId] || vehicle.status || 'available';
                         return (
-                          [
-                            <tr key={`${vehicleId}-main`} className="hover:bg-white/5 transition-colors">
-                              <td className="px-4 py-4">
-                                <div className="flex items-center gap-4">
-                                  <div className="h-16 w-24 overflow-hidden rounded-3xl border border-white/10 bg-[#0F1014]">
-                                    <img src={getVehicleImagePath(vehicle)} alt={vehicle.name} className="h-full w-full object-cover" />
-                                  </div>
-                                  <div>
-                                    <div className="text-sm font-semibold text-white">{vehicle.name}</div>
-                                    <div className="text-xs text-[#B8B3A0]">{vehicle.brand} • {vehicle.model}</div>
-                                  </div>
+                          <tr key={vehicleId} className="hover:bg-white/5 transition-colors">
+                            <td className="px-4 py-4">
+                              <div className="flex items-center gap-4">
+                                <div className="h-16 w-24 overflow-hidden rounded-3xl border border-white/10 bg-[#0F1014]">
+                                  <img src={getVehicleImagePath(vehicle)} alt={vehicle.name} className="h-full w-full object-cover" />
                                 </div>
-                              </td>
-                              <td className="px-4 py-4">
-                                {fleetView === 'active' ? (
-                                  <div className="space-y-2">
-                                    <span className="inline-flex items-center rounded-full border px-3 py-1 text-xs text-white/90 border-white/10 bg-[#111315]">
-                                      {vehicle.status || 'available'}
-                                    </span>
-                                    <select
-                                      value={selectedStatus}
-                                      onChange={e => setFleetStatusChanges(prev => ({ ...prev, [vehicleId]: e.target.value }))}
-                                      className="w-full rounded-3xl border border-white/10 bg-[#0F1014] px-3 py-2 text-sm text-white outline-none"
-                                    >
-                                      {vehicleStatuses.map(status => (
-                                        <option key={status} value={status}>{status}</option>
-                                      ))}
-                                    </select>
-                                  </div>
-                                ) : (
-                                  <span className="inline-flex items-center rounded-full border px-3 py-1 text-xs text-rose-300 border-rose-500/30 bg-rose-500/10">
-                                    In Trash
-                                  </span>
-                                )}
-                              </td>
-                              <td className="px-4 py-4 text-[#D9D1B1]">{vehicle.availability ? 'Yes' : 'No'}</td>
-                              <td className="px-4 py-4 text-[#D9D1B1]">{vehicle.updated_at ? new Date(vehicle.updated_at).toLocaleString() : 'N/A'}</td>
-                              <td className="px-4 py-4 space-y-3">
-                                {fleetView === 'active' ? (
-                                  <button
-                                    onClick={() => handleFleetStatusUpdate(vehicleId, selectedStatus)}
-                                    disabled={updatingStatus[vehicleId]}
-                                    className="w-full rounded-3xl bg-[#1F2937] px-4 py-3 text-xs font-semibold text-white hover:bg-[#111827] disabled:cursor-not-allowed disabled:opacity-50"
-                                  >
-                                    {updatingStatus[vehicleId] ? 'Updating...' : 'Update'}
-                                  </button>
-                                ) : (
-                                  <button
-                                    onClick={() => restoreVehicle(vehicleId)}
-                                    disabled={updatingStatus[`restore-${vehicleId}`]}
-                                    className="w-full rounded-3xl bg-[#2C7A59] px-4 py-3 text-xs font-semibold text-white hover:bg-[#1F5E40] disabled:cursor-not-allowed disabled:opacity-50"
-                                  >
-                                    {updatingStatus[`restore-${vehicleId}`] ? 'Restoring...' : 'Restore'}
-                                  </button>
-                                )}
-                                <button
-                                  onClick={() => handleViewVehicleDetails(vehicleId)}
-                                  className="w-full rounded-3xl border border-white/10 bg-[#0F1014] px-4 py-3 text-xs font-semibold text-[#D9D1B1] hover:bg-white/5"
+                                <div>
+                                  <div className="text-sm font-semibold text-white">{vehicle.name}</div>
+                                  <div className="text-xs text-[#B8B3A0]">{vehicle.brand} • {vehicle.model}</div>
+                                </div>
+                              </div>
+                            </td>
+                            <td className="px-4 py-4">
+                              <div className="space-y-2">
+                                <span className="inline-flex items-center rounded-full border px-3 py-1 text-xs text-white/90 border-white/10 bg-[#111315]">
+                                  {vehicle.status || 'available'}
+                                </span>
+                                <select
+                                  value={selectedStatus}
+                                  onChange={e => setFleetStatusChanges(prev => ({ ...prev, [vehicleId]: e.target.value }))}
+                                  className="w-full rounded-3xl border border-white/10 bg-[#0F1014] px-3 py-2 text-sm text-white outline-none"
                                 >
-                                  {selectedVehicle === vehicleId ? 'Hide Details' : 'View Details'}
-                                </button>
-                                {fleetView === 'active' ? (
-                                  <button
-                                    onClick={() => softDeleteVehicle(vehicleId)}
-                                    disabled={updatingStatus[vehicleId]}
-                                    className="w-full rounded-3xl bg-[#9F1239] px-4 py-3 text-xs font-semibold text-white hover:bg-[#7B1030] disabled:cursor-not-allowed disabled:opacity-50"
-                                  >
-                                    Move To Trash
-                                  </button>
-                                ) : (
-                                  <button
-                                    onClick={() => hardDeleteVehicle(vehicleId)}
-                                    disabled={updatingStatus[`hard-${vehicleId}`]}
-                                    className="w-full rounded-3xl bg-[#7B1030] px-4 py-3 text-xs font-semibold text-white hover:bg-[#5E0C25] disabled:cursor-not-allowed disabled:opacity-50"
-                                  >
-                                    {updatingStatus[`hard-${vehicleId}`] ? 'Deleting...' : 'Delete Permanently'}
-                                  </button>
-                                )}
-                              </td>
-                            </tr>,
-                            selectedVehicle === vehicleId ? (
-                              <tr key={`${vehicleId}-details`} className="bg-white/5">
-                                <td colSpan={5} className="px-4 pb-4">
-                                  <div className="rounded-2xl border border-white/10 bg-[#0F1014] p-4 text-sm text-[#D9D1B1]">
-                                    <div className="mb-3 text-xs uppercase tracking-[0.2em] text-[#C7B894]">Vehicle Details</div>
-                                    <div className="grid gap-3 md:grid-cols-3">
-                                      <div>
-                                        <div className="mb-1 text-xs uppercase tracking-[0.12em] text-[#C7B894]">Name</div>
-                                        <input
-                                          value={vehicleDrafts[vehicleId]?.name ?? vehicle.name}
-                                          onChange={e => updateVehicleDraft(vehicleId, 'name', e.target.value)}
-                                          className="w-full rounded-2xl border border-white/10 bg-[#111315] px-3 py-2 text-sm text-white outline-none"
-                                        />
-                                      </div>
-                                      <div>
-                                        <div className="mb-1 text-xs uppercase tracking-[0.12em] text-[#C7B894]">Category</div>
-                                        <select
-                                          value={vehicleDrafts[vehicleId]?.category ?? vehicle.category}
-                                          onChange={e => updateVehicleDraft(vehicleId, 'category', e.target.value)}
-                                          className="w-full rounded-2xl border border-white/10 bg-[#111315] px-3 py-2 text-sm text-white outline-none"
-                                        >
-                                          {vehicleCategories.map(category => (
-                                            <option key={category} value={category}>{category}</option>
-                                          ))}
-                                        </select>
-                                      </div>
-                                      <div>
-                                        <div className="mb-1 text-xs uppercase tracking-[0.12em] text-[#C7B894]">Year</div>
-                                        <input
-                                          value={vehicleDrafts[vehicleId]?.year ?? String(vehicle.year || '')}
-                                          onChange={e => updateVehicleDraft(vehicleId, 'year', e.target.value)}
-                                          className="w-full rounded-2xl border border-white/10 bg-[#111315] px-3 py-2 text-sm text-white outline-none"
-                                        />
-                                      </div>
-                                      <div>
-                                        <div className="mb-1 text-xs uppercase tracking-[0.12em] text-[#C7B894]">Fuel</div>
-                                        <select
-                                          value={vehicleDrafts[vehicleId]?.fuel_type ?? vehicle.fuel_type}
-                                          onChange={e => updateVehicleDraft(vehicleId, 'fuel_type', e.target.value)}
-                                          className="w-full rounded-2xl border border-white/10 bg-[#111315] px-3 py-2 text-sm text-white outline-none"
-                                        >
-                                          {vehicleFuelTypes.map(type => (
-                                            <option key={type} value={type}>{type}</option>
-                                          ))}
-                                        </select>
-                                      </div>
-                                      <div>
-                                        <div className="mb-1 text-xs uppercase tracking-[0.12em] text-[#C7B894]">Transmission</div>
-                                        <select
-                                          value={vehicleDrafts[vehicleId]?.transmission ?? vehicle.transmission}
-                                          onChange={e => updateVehicleDraft(vehicleId, 'transmission', e.target.value)}
-                                          className="w-full rounded-2xl border border-white/10 bg-[#111315] px-3 py-2 text-sm text-white outline-none"
-                                        >
-                                          {vehicleTransmissions.map(type => (
-                                            <option key={type} value={type}>{type}</option>
-                                          ))}
-                                        </select>
-                                      </div>
-                                      <div>
-                                        <div className="mb-1 text-xs uppercase tracking-[0.12em] text-[#C7B894]">Seats</div>
-                                        <input
-                                          type="number"
-                                          min={1}
-                                          value={vehicleDrafts[vehicleId]?.seats ?? String(vehicle.seats || '')}
-                                          onChange={e => updateVehicleDraft(vehicleId, 'seats', e.target.value)}
-                                          className="w-full rounded-2xl border border-white/10 bg-[#111315] px-3 py-2 text-sm text-white outline-none"
-                                        />
-                                      </div>
-                                      <div className="md:col-span-3">
-                                        <div className="mb-1 text-xs uppercase tracking-[0.12em] text-[#C7B894]">Description</div>
-                                        <textarea
-                                          rows={3}
-                                          value={vehicleDrafts[vehicleId]?.description ?? vehicle.description}
-                                          onChange={e => updateVehicleDraft(vehicleId, 'description', e.target.value)}
-                                          className="w-full rounded-2xl border border-white/10 bg-[#111315] px-3 py-2 text-sm text-white outline-none"
-                                        />
-                                      </div>
-                                    </div>
-                                  </div>
-                                </td>
-                              </tr>
-                            ) : null,
-                          ]
+                                  {vehicleStatuses.map(status => (
+                                    <option key={status} value={status}>{status}</option>
+                                  ))}
+                                </select>
+                              </div>
+                            </td>
+                            <td className="px-4 py-4 text-[#D9D1B1]">{vehicle.availability ? 'Yes' : 'No'}</td>
+                            <td className="px-4 py-4 text-[#D9D1B1]">{vehicle.updated_at ? new Date(vehicle.updated_at).toLocaleString() : 'N/A'}</td>
+                            <td className="px-4 py-4 space-y-3">
+                              <button
+                                onClick={() => handleFleetStatusUpdate(vehicleId, selectedStatus)}
+                                disabled={updatingStatus[vehicleId]}
+                                className="w-full rounded-3xl bg-[#1F2937] px-4 py-3 text-xs font-semibold text-white hover:bg-[#111827] disabled:cursor-not-allowed disabled:opacity-50"
+                              >
+                                Update
+                              </button>
+                              <button
+                                onClick={() => setSelectedVehicle(selectedVehicle === vehicleId ? null : vehicleId)}
+                                className="w-full rounded-3xl border border-white/10 bg-[#0F1014] px-4 py-3 text-xs font-semibold text-[#D9D1B1] hover:bg-white/5"
+                              >
+                                View Details
+                              </button>
+                              <button
+                                onClick={() => softDeleteVehicle(vehicleId)}
+                                disabled={updatingStatus[vehicleId]}
+                                className="w-full rounded-3xl bg-[#9F1239] px-4 py-3 text-xs font-semibold text-white hover:bg-[#7B1030] disabled:cursor-not-allowed disabled:opacity-50"
+                              >
+                                Soft Delete
+                              </button>
+                            </td>
+                          </tr>
                         );
                       })}
                     </tbody>
                   </table>
                 </div>
+
+                {selectedVehicle && (
+                  <div className="mt-6 rounded-[28px] border border-white/10 bg-[#0F1014] p-6 text-sm text-[#D9D1B1]">
+                    <div className="mb-3 text-sm uppercase tracking-[0.2em] text-[#C7B894]">Vehicle Details</div>
+                    {vehicles.filter(vehicle => String(vehicle.id) === selectedVehicle).map(vehicle => (
+                      <div key={vehicle.id} className="grid gap-4 md:grid-cols-2">
+                        <div><strong>Name:</strong> {vehicle.name}</div>
+                        <div><strong>Category:</strong> {vehicle.category}</div>
+                        <div><strong>Year:</strong> {vehicle.year}</div>
+                        <div><strong>Fuel:</strong> {vehicle.fuel_type}</div>
+                        <div><strong>Transmission:</strong> {vehicle.transmission}</div>
+                        <div><strong>Seats:</strong> {vehicle.seats}</div>
+                        <div className="md:col-span-2"><strong>Description:</strong> {vehicle.description}</div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </section>
             )}
 
@@ -936,7 +523,7 @@ export default function BookingDashboard() {
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div className="rounded-3xl border border-white/10 bg-[#0F1014] p-5 text-sm text-[#D9D1B1]">
                     <div className="text-xs uppercase tracking-[0.2em] text-[#C7B894] mb-3">Name</div>
-                    <div>{profile ? getAccountDisplayName(profile) : 'N/A'}</div>
+                    <div>{profile?.name || 'N/A'}</div>
                   </div>
                   <div className="rounded-3xl border border-white/10 bg-[#0F1014] p-5 text-sm text-[#D9D1B1]">
                     <div className="text-xs uppercase tracking-[0.2em] text-[#C7B894] mb-3">Email</div>
@@ -944,7 +531,7 @@ export default function BookingDashboard() {
                   </div>
                   <div className="rounded-3xl border border-white/10 bg-[#0F1014] p-5 text-sm text-[#D9D1B1]">
                     <div className="text-xs uppercase tracking-[0.2em] text-[#C7B894] mb-3">Role</div>
-                    <div>{profile?.role ? getRoleLabel(profile.role) : 'Booking Staff'}</div>
+                    <div>{profile?.role || 'Booking staff'}</div>
                   </div>
                   <div className="rounded-3xl border border-white/10 bg-[#0F1014] p-5 text-sm text-[#D9D1B1]">
                     <div className="text-xs uppercase tracking-[0.2em] text-[#C7B894] mb-3">Member since</div>
@@ -956,35 +543,6 @@ export default function BookingDashboard() {
           </main>
         </div>
       </div>
-
-      {confirmAction && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 px-4">
-          <div className="w-full max-w-md rounded-3xl border border-white/10 bg-[#0F1014] p-6 text-white shadow-2xl">
-            <h3 className="text-lg font-semibold mb-2">
-              {confirmAction.mode === 'soft' ? 'Move Vehicle To Trash?' : 'Delete Vehicle Permanently?'}
-            </h3>
-            <p className="text-sm text-[#B8B3A0] mb-6">
-              {confirmAction.mode === 'soft'
-                ? `"${confirmAction.vehicleName}" will be moved to Trash and can be restored later.`
-                : `"${confirmAction.vehicleName}" will be permanently deleted and cannot be retrieved again.`}
-            </p>
-            <div className="flex justify-end gap-3">
-              <button
-                onClick={() => setConfirmAction(null)}
-                className="rounded-2xl border border-white/10 px-4 py-2 text-sm text-[#D9D1B1] hover:bg-white/5"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleConfirmAction}
-                className={`rounded-2xl px-4 py-2 text-sm font-semibold text-white ${confirmAction.mode === 'soft' ? 'bg-[#9F1239] hover:bg-[#7B1030]' : 'bg-[#7B1030] hover:bg-[#5E0C25]'}`}
-              >
-                {confirmAction.mode === 'soft' ? 'Move To Trash' : 'Delete Permanently'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
       <Footer />
     </div>
   );

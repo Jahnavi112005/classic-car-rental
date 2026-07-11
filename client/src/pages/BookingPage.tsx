@@ -83,15 +83,17 @@ export default function BookingPage() {
     if (!form.pickupDate.trim()) nextErrors.pickupDate = 'Pickup date is required.';
     if (!form.returnDate.trim()) nextErrors.returnDate = 'Return date is required.';
     if (!form.pickupLocation.trim()) nextErrors.pickupLocation = 'Pickup location is required.';
-    if (form.governmentId && !form.governmentIdType) nextErrors.governmentIdType = 'Select document type.';
-    if (form.governmentId && !form.documentNumber.trim()) {
-      nextErrors.documentNumber = 'Document number is required when uploading a document.';
-    } else if (form.documentNumber.trim() && form.governmentIdType) {
+    if (!form.governmentId) nextErrors.governmentId = 'Upload a government ID.';
+    if (!form.governmentIdType) nextErrors.governmentIdType = 'Select document type.';
+    if (!form.documentNumber.trim()) {
+      nextErrors.documentNumber = 'Document number is required.';
+    } else {
       const validation = validateDocumentNumber(form.governmentIdType, form.documentNumber);
       if (validation.isValid === false) {
         nextErrors.documentNumber = validation.message;
       }
     }
+    if (!form.country.trim()) nextErrors.country = 'Country is required.';
     if (form.returnDate && form.pickupDate && form.returnDate < form.pickupDate) {
       nextErrors.returnDate = 'Return date must be after pickup date.';
     }
@@ -109,19 +111,20 @@ export default function BookingPage() {
     }
     (async () => {
       try {
-        let documentId: string | null = null;
-        if (form.governmentId) {
-          const fd = new FormData();
-          fd.append('file', form.governmentId as Blob);
-          fd.append('type', form.governmentIdType || 'other');
-          fd.append('documentType', form.governmentIdType || 'other');
-          fd.append('fullName', form.fullName);
-          if (form.documentNumber.trim()) fd.append('documentNumber', sanitizeDocumentNumber(form.governmentIdType, form.documentNumber));
-          if (form.country.trim()) fd.append('country', form.country);
-          const doc = await documentApi.upload(fd);
-          documentId = doc?._id || doc?.id || null;
+        // upload document first
+        const fd = new FormData();
+        fd.append('file', form.governmentId as Blob);
+        fd.append('type', form.governmentIdType || 'other');
+        fd.append('documentType', form.governmentIdType || 'other');
+        fd.append('fullName', form.fullName);
+        fd.append('documentNumber', sanitizeDocumentNumber(form.governmentIdType, form.documentNumber));
+        fd.append('country', form.country);
+        const doc = await documentApi.upload(fd);
+        if (!doc || (doc.status !== 'verified' && doc.verificationStatus !== 'verified')) {
+          throw new Error(doc?.verificationMessage || 'Identity verification failed.');
         }
 
+        // create booking payload
         type CustomerPayload = { name: string; email?: string; phone?: string; address?: string };
         const payload: Partial<Booking> & { customer?: CustomerPayload } = {
           pickup_location: form.pickupLocation,
@@ -134,10 +137,7 @@ export default function BookingPage() {
           car_id: form.vehicleSelection,
           total_days: 1,
           total_amount: 0,
-          document: documentId,
-          governmentId: documentId || null,
-          documentNumber: form.documentNumber.trim() || '',
-          documentType: form.governmentIdType || '',
+          document: doc._id || doc.id || null,
           customer: {
             name: form.fullName,
             email: form.email,
@@ -145,8 +145,9 @@ export default function BookingPage() {
           },
         };
 
+        // try guest create first; if user logged in, server will handle accordingly
         await bookingApi.createGuest(payload);
-        setSuccess('Booking Submitted Successfully! Our staff will review your booking and contact you shortly using the phone number you provided. Please keep your phone available.');
+        setSuccess(doc.verificationMessage || 'Booking request submitted successfully. We will contact you shortly.');
         setErrors({});
         setForm(initialForm);
         setTimeout(() => setSuccess(''), 6000);
@@ -382,13 +383,14 @@ export default function BookingPage() {
                       </div>
                     </div>
                     <div className="mt-3 rounded-2xl border border-[#B67C52]/10 bg-[#FFF8EE] px-4 py-3 text-[11px] text-stone">
-                      <p className="font-semibold text-[#7B4A1E] mb-1">Government ID upload is optional.</p>
-                      <p>If you choose to upload a document, provide the details to help us review your booking faster.</p>
-                      <p className="font-semibold text-[#7B4A1E] mt-2 mb-1">Accepted Formats:</p>
+                      <p className="font-semibold text-[#7B4A1E] mb-1">Accepted Formats:</p>
                       <p>JPG, JPEG, PNG, PDF</p>
                       <p className="font-semibold text-[#7B4A1E] mt-2 mb-1">Maximum Size:</p>
                       <p>10 MB</p>
+                      <p className="font-semibold text-[#7B4A1E] mt-2 mb-1">Upload Guidance:</p>
+                      <p>Make sure the entire document is visible, with no blur, no flash reflection, all four corners visible, and upload the original document.</p>
                     </div>
+                    {errors.governmentId && <p className="text-red-500 text-xs mt-2">{errors.governmentId}</p>}
                     {errors.governmentIdType && <p className="text-red-500 text-xs mt-2">{errors.governmentIdType}</p>}
                   </div>
 

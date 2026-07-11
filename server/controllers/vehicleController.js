@@ -4,23 +4,21 @@ import { fleetCars } from '../utils/fleetSeed.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { listToClient, toClient } from '../utils/format.js';
 
+const ORDER_STEP = 1000;
+const seedOrder = new Map(fleetCars.map((car, index) => [String(car.id), (index + 1) * ORDER_STEP]));
+
 function normalizeSeedCar(car) {
   return {
     ...car,
     id: String(car.id),
     _id: String(car.id),
+    displayOrder: seedOrder.get(String(car.id)) || ORDER_STEP,
     created_at: car.created_at,
   };
 }
 
-async function importSeedVehicleById(id) {
-  const fallback = fleetCars.find(car => String(car.id) === String(id) && !car.isDeleted);
-  if (!fallback) return null;
-
-  let vehicle = await Vehicle.findOne({ seedId: fallback.id, isDeleted: false });
-  if (vehicle) return vehicle;
-
-  const vehicleData = {
+function seedVehicleData(fallback) {
+  return {
     seedId: fallback.id,
     name: fallback.name,
     brand: fallback.brand,
@@ -42,12 +40,88 @@ async function importSeedVehicleById(id) {
     featured: fallback.featured || false,
     status: 'available',
     isDeleted: false,
+    displayOrder: seedOrder.get(String(fallback.id)) || ORDER_STEP,
     createdAt: new Date(fallback.created_at),
     updatedAt: new Date(fallback.created_at),
   };
+}
 
-  vehicle = await Vehicle.create(vehicleData);
+async function importSeedVehicleById(id) {
+  const fallback = fleetCars.find(car => String(car.id) === String(id) && !car.isDeleted);
+  if (!fallback) return null;
+
+  let vehicle = await Vehicle.findOne({ seedId: fallback.id, isDeleted: false });
+  if (vehicle) return vehicle;
+
+  vehicle = await Vehicle.create(seedVehicleData(fallback));
   return vehicle;
+}
+
+function getOrderValue(vehicle) {
+  if (typeof vehicle.displayOrder === 'number') return vehicle.displayOrder;
+  if (vehicle.seedId != null) return seedOrder.get(String(vehicle.seedId)) || Number.MAX_SAFE_INTEGER;
+  return Number.MAX_SAFE_INTEGER;
+}
+
+function sortByFleetOrder(a, b) {
+  const orderDiff = getOrderValue(a) - getOrderValue(b);
+  if (orderDiff !== 0) return orderDiff;
+  return new Date(a.createdAt || a.created_at || 0) - new Date(b.createdAt || b.created_at || 0);
+}
+
+async function ensurePersistedFleetOrder() {
+  const seededRecords = await Vehicle.find({ seedId: { $ne: null } }).select('seedId');
+  const importedSeedIds = new Set(seededRecords.map(vehicle => String(vehicle.seedId)));
+
+  const seedsToCreate = fleetCars
+    .filter(car => !car.isDeleted && !importedSeedIds.has(String(car.id)))
+    .map(seedVehicleData);
+
+  if (seedsToCreate.length) {
+    await Vehicle.insertMany(seedsToCreate, { ordered: false });
+  }
+
+  const vehicles = await Vehicle.find({ hardDeleted: { $ne: true }, isDeleted: false });
+  const sorted = vehicles.sort(sortByFleetOrder);
+  const writes = sorted.map((vehicle, index) => ({
+    updateOne: {
+      filter: { _id: vehicle._id },
+      update: { displayOrder: (index + 1) * ORDER_STEP },
+    },
+  }));
+
+  if (writes.length) {
+    await Vehicle.bulkWrite(writes);
+  }
+
+  return Vehicle.find({ hardDeleted: { $ne: true }, isDeleted: false }).sort({ displayOrder: 1, createdAt: 1 });
+}
+
+async function moveVehicleAfter(vehicleId, insertAfterId) {
+  if (!insertAfterId) return;
+
+  const vehicles = await ensurePersistedFleetOrder();
+  const moving = vehicles.find(vehicle => String(vehicle._id) === String(vehicleId));
+  if (!moving) return;
+
+  const remaining = vehicles.filter(vehicle => String(vehicle._id) !== String(vehicleId));
+  const targetIndex = remaining.findIndex(vehicle => (
+    String(vehicle._id) === String(insertAfterId) || String(vehicle.seedId) === String(insertAfterId)
+  ));
+
+  const nextOrder = [...remaining];
+  if (targetIndex >= 0) {
+    nextOrder.splice(targetIndex + 1, 0, moving);
+  } else {
+    nextOrder.push(moving);
+  }
+
+  await Vehicle.bulkWrite(nextOrder.map((vehicle, index) => ({
+    updateOne: {
+      filter: { _id: vehicle._id },
+      update: { displayOrder: (index + 1) * ORDER_STEP },
+    },
+  })));
 }
 
 export const listVehicles = asyncHandler(async (req, res) => {
@@ -59,10 +133,8 @@ export const listVehicles = asyncHandler(async (req, res) => {
   if (deletedOnly) filter = { ...baseFilter, isDeleted: true };
   else if (includeDeleted) filter = { ...baseFilter };
 
-  const vehicles = await Vehicle.find(filter).sort({ createdAt: -1 });
+  const vehicles = await Vehicle.find(filter);
 
-  // Include deleted seeded records as well, so a soft-deleted seed car does not reappear
-  // from the static fallback list on subsequent reads.
   const seededRecords = await Vehicle.find({ seedId: { $ne: null } }).select('seedId');
   const importedSeedIds = new Set(
     seededRecords
@@ -77,7 +149,7 @@ export const listVehicles = asyncHandler(async (req, res) => {
       .map(normalizeSeedCar)
       .map(car => ({ ...car, status: 'available' }));
 
-  const combinedVehicles = [...listToClient(vehicles), ...seedVehicles];
+  const combinedVehicles = [...listToClient(vehicles), ...seedVehicles].sort(sortByFleetOrder);
   const uniqueVehicles = removeDuplicateVehicles(combinedVehicles);
   res.json(uniqueVehicles);
 });
@@ -121,8 +193,7 @@ export const updateVehicle = asyncHandler(async (req, res) => {
     throw new Error('Vehicle not found');
   }
 
-  const updates = { ...req.body };
-  // Keep status and availability aligned for fleet controls.
+  const { insertAfterId, position, ...updates } = req.body;
   if (updates.status && updates.availability === undefined) {
     updates.availability = updates.status === 'available';
   }
@@ -130,22 +201,34 @@ export const updateVehicle = asyncHandler(async (req, res) => {
     updates.status = 'available';
   }
 
-  const updatedVehicle = await Vehicle.findByIdAndUpdate(vehicle._id, updates, {
+  await Vehicle.findByIdAndUpdate(vehicle._id, updates, {
     new: true,
     runValidators: true,
   });
 
+  if (position === 'after' && insertAfterId) {
+    await moveVehicleAfter(vehicle._id, insertAfterId);
+  }
+
+  const updatedVehicle = await Vehicle.findById(vehicle._id);
   res.json(toClient(updatedVehicle));
 });
 
 export const createVehicle = asyncHandler(async (req, res) => {
-  const payload = { ...req.body };
+  const { insertAfterId, position, ...payload } = req.body;
   if (payload.status && payload.availability === undefined) {
     payload.availability = payload.status === 'available';
   }
 
+  const maxOrder = await Vehicle.findOne({ hardDeleted: { $ne: true } }).sort({ displayOrder: -1 }).select('displayOrder');
+  payload.displayOrder = (maxOrder?.displayOrder || 0) + ORDER_STEP;
+
   const created = await Vehicle.create(payload);
-  res.status(201).json(toClient(created));
+  if (position === 'after' && insertAfterId) {
+    await moveVehicleAfter(created._id, insertAfterId);
+  }
+
+  res.status(201).json(toClient(await Vehicle.findById(created._id)));
 });
 
 export const deleteVehicle = asyncHandler(async (req, res) => {
@@ -200,7 +283,6 @@ export const hardDeleteVehicle = asyncHandler(async (req, res) => {
     throw new Error('Vehicle not found');
   }
 
-  // For seeded vehicles keep a tombstone so fallback seed data does not resurrect them.
   if (vehicle.seedId != null) {
     await Vehicle.findByIdAndUpdate(
       vehicle._id,

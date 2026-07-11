@@ -14,7 +14,7 @@ export default function Footer({ onBranchClick }: FooterProps = {}) {
     <footer className="bg-earth border-t border-brown/20">
       {/* CTA Banner */}
       <div className="border-b border-brown/20 py-12 px-4" style={{ background: 'linear-gradient(135deg, rgba(123,74,30,0.1) 0%, rgba(92,55,21,0.15) 50%, rgba(123,74,30,0.1) 100%)' }}>
-        <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6">
+        <div className="mx-auto flex max-w-7xl flex-col items-stretch justify-between gap-6 text-center md:flex-row md:items-center md:text-left">
           <div>
             <h3 className="font-playfair text-2xl md:text-3xl font-bold text-cream mb-2">
               Ready to <span className="text-brown-light">Drive in Luxury?</span>
@@ -23,12 +23,12 @@ export default function Footer({ onBranchClick }: FooterProps = {}) {
               Call / WhatsApp us now for instant booking
             </p>
           </div>
-          <div className="flex flex-col sm:flex-row items-center gap-4">
-            <a href="tel:9036444477" className="btn-gold text-base px-8 py-4">
+          <div className="flex flex-col items-stretch gap-3 sm:flex-row sm:items-center sm:gap-4">
+            <a href="tel:9036444477" className="btn-gold justify-center px-6 py-4 text-base sm:px-8">
               <Phone className="w-5 h-5" />
               9036444477
             </a>
-            <a href="tel:7406444477" className="btn-outline-gold text-base px-8 py-4">
+            <a href="tel:7406444477" className="btn-outline-gold justify-center px-6 py-4 text-base sm:px-8">
               <Phone className="w-5 h-5" />
               7406444477
             </a>
@@ -38,7 +38,7 @@ export default function Footer({ onBranchClick }: FooterProps = {}) {
 
       {/* Main Footer */}
       <div className="py-16 px-4">
-        <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-10">
+        <div className="mx-auto grid max-w-7xl grid-cols-1 gap-10 sm:grid-cols-2 lg:grid-cols-5">
           {/* Brand */}
           <div className="lg:col-span-2">
             <Link to="/" className="flex items-center gap-3 mb-6">
@@ -191,7 +191,7 @@ export default function Footer({ onBranchClick }: FooterProps = {}) {
           <p className="text-stone text-xs font-poppins text-center md:text-left">
             © {currentYear} Classic Car Rental. All Rights Reserved.
           </p>
-          <div className="flex items-center gap-6">
+          <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-6">
             <Link to="#" className="text-xs text-stone hover:text-brown font-poppins transition-colors">Privacy Policy</Link>
             <Link to="#" className="text-xs text-stone hover:text-brown font-poppins transition-colors">Terms of Service</Link>
             <Link to="#" className="text-xs text-stone hover:text-brown font-poppins transition-colors">Sitemap</Link>
@@ -201,3 +201,4 @@ export default function Footer({ onBranchClick }: FooterProps = {}) {
     </footer>
   );
 }
+

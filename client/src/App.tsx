@@ -8,6 +8,8 @@ import Login from './pages/Login';
 import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
 import BookingDashboard from './pages/BookingDashboard';
+import OwnerDashboard from './pages/OwnerDashboard';
+import ProtectedRoute from './components/ProtectedRoute';
 
 function PageWrapper({ children }: { children: React.ReactNode }) {
   return (
@@ -33,7 +35,12 @@ export default function App() {
         <Route path="/forgot-password" element={<PageWrapper><ForgotPassword /></PageWrapper>} />
         <Route path="/reset-password/:token" element={<PageWrapper><ResetPassword /></PageWrapper>} />
         <Route path="/booking" element={<PageWrapper><BookingPage /></PageWrapper>} />
-        <Route path="/booking/dashboard" element={<PageWrapper><BookingDashboard /></PageWrapper>} />
+        <Route element={<ProtectedRoute allowedRoles={['booking_staff', 'owner']} redirectTo="/login" />}>
+          <Route path="/booking/dashboard" element={<PageWrapper><BookingDashboard /></PageWrapper>} />
+        </Route>
+        <Route element={<ProtectedRoute allowedRoles={['owner']} redirectTo="/login" />}>
+          <Route path="/owner/dashboard" element={<PageWrapper><OwnerDashboard /></PageWrapper>} />
+        </Route>
         <Route path="*" element={<PageWrapper><NotFound /></PageWrapper>} />
       </Routes>
     </AnimatePresence>

@@ -23,6 +23,18 @@ export default function Home() {
     setBranchOpen(true);
   }, []);
 
+  // Ensure page starts at top on initial load to avoid unexpected scroll
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      window.scrollTo(0, 0);
+      const t = setTimeout(() => {
+        window.scrollTo(0, 0);
+        try { document.documentElement.scrollTop = 0; } catch (e) {}
+      }, 300);
+      return () => clearTimeout(t);
+    }
+  }, []);
+
   return (
     <div className="min-h-screen">
       <Navbar />

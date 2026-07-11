@@ -261,6 +261,13 @@
   }
 }
 
+@media (max-width: 768px) {
+  .hero-background {
+    background-size: cover, cover;
+    background-position: center center, center center;
+  }
+}
+
 @layer utilities {
   .text-gradient-brown {
     background: linear-gradient(135deg, #7B4A1E, #9A6B3E, #5C3715);
@@ -271,6 +278,12 @@
 
   .bg-hero {
     background: linear-gradient(180deg, #F8F3EA 0%, #F0EBE0 50%, #E8E3D8 100%);
+  }
+
+  .hero-background {
+    background-repeat: no-repeat, no-repeat;
+    background-position: center top, right bottom;
+    background-size: cover, cover;
   }
 
   .bg-section {
@@ -287,5 +300,48 @@
 
   .font-montserrat {
     font-family: 'Montserrat', sans-serif;
+  }
+}
+
+/* mobile-responsive-hardening */
+@media (max-width: 640px) {
+  #root {
+    max-width: 100vw;
+    overflow-x: hidden;
+  }
+
+  button,
+  a,
+  input,
+  select,
+  textarea {
+    min-width: 0;
+  }
+
+  .btn-gold,
+  .btn-outline-gold,
+  .btn-cream {
+    min-height: 44px;
+    justify-content: center;
+    text-align: center;
+    white-space: normal;
+  }
+
+  .section-padding {
+    padding: 56px 16px;
+  }
+
+  .section-title {
+    font-size: 2rem;
+    line-height: 1.15;
+  }
+
+  .luxury-card:hover {
+    transform: none;
+  }
+
+  .mobile-scrollbar-safe {
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
   }
 }
